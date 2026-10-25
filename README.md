@@ -15,12 +15,12 @@ implicit and explicit loading. Qt integration is deferred.
 - Missing-DLL and missing-export error handling have been tested.
 - Simulated-temperature reads return status codes and write through an output
   parameter; successful reads and null-pointer rejection have been tested.
-- Opaque handles support opening and closing a simulated device, including
-  invalid open arguments and null-safe close calls.
+- Opaque-handle lifetime, invalid open arguments, and null-safe Close were
+  verified first with simulation and then with real USB resources.
 - Handle-based temperature reads access private device state and reject null
   handles or output pointers without modifying the caller's output on failure.
-- The DLL decodes a simulated 10-byte little-endian temperature frame. Valid,
-  negative, fault, unknown-type, reserved-flag, and truncated-frame cases were tested.
+- The 10-byte little-endian decoder was tested with valid, negative, fault,
+  unknown-type, reserved-flag, and truncated-frame inputs.
 - Firmware encodes the same frames and prints them as hex text over USB CDC;
   real temperature and open-thermocouple packets were verified on the board.
 - The separate `usb_probe` firmware enumerates as a vendor device and Windows
@@ -29,8 +29,11 @@ implicit and explicit loading. Qt integration is deferred.
   and verifies two 64-byte bulk endpoints (OUT 0x01 and IN 0x81).
 - The DLL now discovers and opens the real board, owns its Windows/WinUSB
   handles, and remembers its bulk endpoints. Connected and absent-board cases
-  were tested. Temperature reads still decode its simulated packet.
-- Actual USB data transfers and real sensor readings through the DLL are next.
+  were tested.
+- The board transmits known 42.25 C test frames over bulk IN, and the DLL reads
+  and decodes them successfully. Real sensor acquisition over WinUSB is next.
+- Twenty consecutive real USB reads passed. Disabling board transmission while
+  keeping USB connected produced timeout status 8 after 1000 ms with output unchanged.
 
 ## Repository layout
 
@@ -54,7 +57,7 @@ Electronics_Inventory_AI_Export.csv
 4. Keep `ThermoDevice.dll` beside `ThermoConsole.exe` in
    `dll/ThermoHost/x64/Debug/`.
 
-Current console output:
+Example DLL portion of console output (read timings vary):
 
 ```text
 Explicitly loaded DLL API version: 2
@@ -64,9 +67,9 @@ Null pointer status: 1
 Open status: 0
 Null handle status: 1
 Output after rejected read: -999
-Handle read status: 0
-Output after handle read: 25.5
-Handle temperature: 25.5 C
+USB sample 1 | status 0 | 42.25 C | elapsed 0 ms
+...
+USB sample 20 | status 0 | 42.25 C | elapsed 250 ms
 Null output status: 1
 Device closed
 Null open status: 1
@@ -77,6 +80,11 @@ The value 2 is from a DLL replacement exercise. It does not yet represent a
 formally versioned production API. The handle-based exercise now requires the
 board running `usb_probe.uf2`: without it, Open returns DeviceNotFound (5).
 The older fixed-value helper and API version query still work without hardware.
+
+The `winusb-test-frame` tag preserves the working constant-frame USB transfer
+and no-data timeout exercise before MAX6675 acquisition is integrated. To repeat
+the timeout test, set `SEND_TEST_PACKETS` to 0 in `firmware/usb_probe.c`, rebuild
+and flash the probe, and run the console. Restore it to 1 and reflash afterward.
 
 ## Packet experiment checkpoint
 

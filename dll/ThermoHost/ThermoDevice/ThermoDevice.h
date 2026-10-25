@@ -17,7 +17,9 @@ enum ThermoStatus
 	ThermoStatus_SensorFault = 4,
 	ThermoStatus_DeviceNotFound = 5,
 	ThermoStatus_UsbError = 6,
-	ThermoStatus_UnsupportedDevice = 7
+	ThermoStatus_UnsupportedDevice = 7,
+	ThermoStatus_Timeout = 8
+
 };
 
 /* Expose the handle type without revealing the device layout. */

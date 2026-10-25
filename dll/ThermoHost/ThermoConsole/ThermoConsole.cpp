@@ -295,7 +295,7 @@ int main()
 	const int InvalidStatus = pGetTemperature(0);
 	std::cout << "Null pointer status: " << InvalidStatus << '\n';
 
-	/* Open a simulated device; the DLL writes its handle into this pointer. */
+	/* Open the real USB device through the DLL's opaque handle API. */
 	ThermoHandle* pDevice = 0;
 
 	const int OpenStatus = pOpen(&pDevice);
@@ -315,17 +315,32 @@ int main()
 	std::cout << "Null handle status: " << NullHandleStatus << '\n';
 	std::cout << "Output after rejected read: " << HandleTemperatureC << '\n';
 
-	/* Read while the device is still open and use the output only on success. */
-	const int HandleReadStatus = pReadTemperature(pDevice, &HandleTemperatureC);
-
-	std::cout << "Handle read status: " << HandleReadStatus << '\n';
-
-	/* Show whether a failed read preserved the caller's original value. */
-	std::cout << "Output after handle read: " << HandleTemperatureC << '\n';
-
-	if (HandleReadStatus == ThermoStatus_Ok)
+	/* Check that repeated reads preserve frame alignment and device state. */
+	for (int Sample = 0; Sample < 20; ++Sample)
 	{
-		std::cout << "Handle temperature: " << HandleTemperatureC << " C\n";
+		double Value = -999.0;
+		const ULONGLONG ReadStarted = GetTickCount64();
+		const int ReadStatus = pReadTemperature(pDevice, &Value);
+		const ULONGLONG ElapsedMs = GetTickCount64() - ReadStarted;
+
+		std::cout << "USB sample " << Sample + 1
+			<< " | status " << ReadStatus;
+
+		if (ReadStatus == ThermoStatus_Ok)
+		{
+			std::cout << " | " << Value << " C";
+		}
+		else
+		{
+			std::cout << " | output " << Value;
+		}
+
+		std::cout << " | elapsed " << ElapsedMs << " ms";
+
+		std::cout << '\n';
+
+		if (ReadStatus != ThermoStatus_Ok)
+			break;
 	}
 
 	/* Keep the handle valid so this test isolates the missing output pointer. */

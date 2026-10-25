@@ -13,7 +13,7 @@
 #pragma comment(lib, "Winusb.lib")
 #pragma comment(lib, "Setupapi.lib")
 
-/* Own the real USB resources; keep a simulated packet until reads use USB. */
+/* Own the real USB resources and receive state for one open device. */
 struct st_ThermoDevice
 {
 	/* Windows resources start empty and are released by Thermo_Close. */
@@ -24,12 +24,9 @@ struct st_ThermoDevice
 	UCHAR BulkInPipe = 0;
 	UCHAR BulkOutPipe = 0;
 
-	std::uint8_t Packet[10] =
-	{
-		0x01, 0x00,
-		0xF6, 0x09, 0x00, 0x00,
-		0xE8, 0x03, 0x00, 0x00
-	};
+	/* Assemble a complete wire frame across successful reads. */
+	std::uint8_t Packet[10] = {};
+	ULONG PacketBytes = 0;
 };
 
 /**************************************************************************************************/
@@ -240,11 +237,61 @@ int __cdecl Thermo_ReadTemperature(
 	ThermoHandle* pHandle,
 	double* pTemperatureC)
 {
-	/* Require a live handle and writable output storage. */
+	/* Validate arguments before touching USB or caller storage. */
 	if (!pHandle || !pTemperatureC)
 		return ThermoStatus_InvalidArgument;
 
-	/* Decode the simulated frame using the future USB receive format. */
+	/* Use a one-second read budget for this initial API. */
+	const ULONG TimeoutMs = 1000;
+	const ULONGLONG Started = GetTickCount64();
+
+	while (pHandle->PacketBytes < sizeof(pHandle->Packet))
+	{
+		/* Recalculate the remaining budget rather than restarting it per chunk. */
+		const ULONGLONG Elapsed = GetTickCount64() - Started;
+
+		if (Elapsed >= TimeoutMs)
+			return ThermoStatus_Timeout;
+
+		ULONG RemainingTimeout = TimeoutMs - static_cast<ULONG>(Elapsed);
+
+		if (!WinUsb_SetPipePolicy(
+			pHandle->UsbInterface,
+			pHandle->BulkInPipe,
+			PIPE_TRANSFER_TIMEOUT,
+			sizeof(RemainingTimeout),
+			&RemainingTimeout))
+		{
+			return ThermoStatus_UsbError;
+		}
+
+		/* Request only the bytes still needed for this frame. */
+		const ULONG RemainingBytes =
+			static_cast<ULONG>(sizeof(pHandle->Packet)) - pHandle->PacketBytes;
+
+		ULONG BytesRead = 0;
+
+		if (!WinUsb_ReadPipe(
+			pHandle->UsbInterface,
+			pHandle->BulkInPipe,
+			pHandle->Packet + pHandle->PacketBytes,
+			RemainingBytes,
+			&BytesRead,
+			0))
+		{
+			const DWORD ErrorCode = GetLastError();
+
+			return (ErrorCode == ERROR_SEM_TIMEOUT)
+				? ThermoStatus_Timeout : ThermoStatus_UsbError;
+		}
+
+		/* Retain successful partial reads, including across a later timeout. */
+		pHandle->PacketBytes += BytesRead;
+	}
+
+	/* Consume this complete frame; the decoder writes output only on success. */
+	pHandle->PacketBytes = 0;
+
 	return DecodeTemperaturePacket(
 		pHandle->Packet,
 		sizeof(pHandle->Packet),

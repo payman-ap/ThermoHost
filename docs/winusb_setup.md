@@ -122,19 +122,52 @@ ongoing DLL integration continues on `main`.
   deletes the private object. Null remains allowed.
 - User-verified: connected board gives Open status 0 and successful cleanup;
   disconnected board gives Open status 5.
-- `Thermo_ReadTemperature` still decodes the private simulated packet. The
-  printed 25.5 C is not a reading received from the connected board.
+- At this opening-only checkpoint, `Thermo_ReadTemperature` still decoded the
+  private simulated packet; its printed 25.5 C did not come from the board.
 - Windows failures currently map to UsbError; detailed Win32 errors are not
   yet exposed by the public DLL API.
 
 Milestone tag: `winusb-dll-open`, preserving real device opening and cleanup
 inside the DLL before temperature reads are connected to USB transfers.
 
+## First real USB frame transfer
+
+- `usb_probe.c` now queues a known 42.25 C frame at approximately 250 ms
+  intervals when mounted and when its transmit buffer has room.
+- It services USB with `tud_task_ext(0, false)` in a short loop. The test value
+  is fixed, while the little-endian timestamp changes with device uptime.
+- The user built and flashed it and confirmed that WinUSB binding remained intact.
+- Removed the simulated initialized frame from the DLL's private handle.
+  The receive buffer now starts empty and tracks accumulated successful bytes.
+- `Thermo_ReadTemperature` uses synchronous `WinUsb_ReadPipe` calls with a
+  one-second budget, reducing the pipe timeout for each additional chunk.
+- Default ALLOW_PARTIAL_READS=true and AUTO_FLUSH=false retain excess USB
+  data for subsequent reads. Application state accumulates one 10-byte frame.
+- A complete frame is passed to the existing decoder. Caller output remains
+  unchanged until decoding succeeds. Timeout status is 8.
+- User-confirmed output: handle read status 0, output 42.25, and normal cleanup.
+  The older hardware-independent helper still prints its fixed 25 C.
+- User-verified repeated-read test: all 20 calls returned status 0 and 42.25 C,
+  followed by successful argument checks and cleanup.
+- Added `SEND_TEST_PACKETS` as a compile-time test switch. With it set to zero,
+  the board stays enumerated but sends no frames.
+- User-verified no-data test: Open status 0, Read status 8 after 1000 ms,
+  unchanged output -999, and successful cleanup.
+- The console now measures each read and prints the unchanged sentinel on
+  failures. Its sample loop stops on the first failed read.
+- After restoring SEND_TEST_PACKETS=1 and reflashing, the user confirmed another
+  complete 20-sample run at 42.25 C. Early buffered reads completed in 0 ms;
+  later calls waited roughly 234–266 ms for newly transmitted frames.
+- Recovery after interrupted transfers has not yet been exercised. The
+  fixed-frame protocol does not yet provide stream resynchronization after data loss.
+
+Milestone tag: `winusb-test-frame`. This preserves the verified known-frame
+transfer and no-data timeout exercise before real sensor acquisition.
+
 ## Next
 
-Transmit a known test frame from the board and receive it through the DLL,
-then connect sensor acquisition. The current board probe only services USB
-requests; it does not acquire or transmit sensor frames.
+Replace the known test frame with MAX6675 acquisition, keeping frequent TinyUSB
+servicing and the existing frame format. The default test transmitter is enabled.
 
 ## References
 
