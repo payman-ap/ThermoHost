@@ -108,11 +108,33 @@ Milestone tag: `winusb-console-probe`. Diagnostic experiment branch:
 `winusb-diagnostics`. Both start at this verified console-probe checkpoint;
 ongoing DLL integration continues on `main`.
 
+## USB ownership inside the DLL
+
+- Added private Windows device and WinUSB interface handles, plus discovered
+  bulk IN/OUT pipe IDs, to `st_ThermoDevice` without changing public signatures.
+- `OpenUsbDevice` performs discovery, opens the first matching device, initializes
+  WinUSB, verifies the vendor interface, and requires a bulk IN endpoint.
+- New statuses: DeviceNotFound (5), UsbError (6), UnsupportedDevice (7).
+- `Thermo_Open` clears the caller's output slot, allocates private state, and
+  publishes it only after the USB helper succeeds. Failure calls `Thermo_Close`
+  to release partially acquired resources before returning the status.
+- `Thermo_Close` releases the WinUSB interface, closes the Windows handle, and
+  deletes the private object. Null remains allowed.
+- User-verified: connected board gives Open status 0 and successful cleanup;
+  disconnected board gives Open status 5.
+- `Thermo_ReadTemperature` still decodes the private simulated packet. The
+  printed 25.5 C is not a reading received from the connected board.
+- Windows failures currently map to UsbError; detailed Win32 errors are not
+  yet exposed by the public DLL API.
+
+Milestone tag: `winusb-dll-open`, preserving real device opening and cleanup
+inside the DLL before temperature reads are connected to USB transfers.
+
 ## Next
 
-Move the verified discovery/open/endpoint logic behind the DLL's opaque handle,
-then add firmware transmission and actual USB reads. The current board probe
-only services USB requests; it does not acquire or transmit sensor frames.
+Transmit a known test frame from the board and receive it through the DLL,
+then connect sensor acquisition. The current board probe only services USB
+requests; it does not acquire or transmit sensor frames.
 
 ## References
 

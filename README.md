@@ -27,8 +27,10 @@ implicit and explicit loading. Qt integration is deferred.
   automatically binds Microsoft's `winusb.sys`; verified in Device Manager.
 - The console discovers the real device, retrieves its path, initializes WinUSB,
   and verifies two 64-byte bulk endpoints (OUT 0x01 and IN 0x81).
-- WinUSB integration inside the DLL and real temperature transfers are not
-  implemented yet; the DLL still reads its simulated packet.
+- The DLL now discovers and opens the real board, owns its Windows/WinUSB
+  handles, and remembers its bulk endpoints. Connected and absent-board cases
+  were tested. Temperature reads still decode its simulated packet.
+- Actual USB data transfers and real sensor readings through the DLL are next.
 
 ## Repository layout
 
@@ -72,7 +74,9 @@ Null close completed
 ```
 
 The value 2 is from a DLL replacement exercise. It does not yet represent a
-formally versioned production API. This exercise does not require the board.
+formally versioned production API. The handle-based exercise now requires the
+board running `usb_probe.uf2`: without it, Open returns DeviceNotFound (5).
+The older fixed-value helper and API version query still work without hardware.
 
 ## Packet experiment checkpoint
 

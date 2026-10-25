@@ -14,7 +14,10 @@ enum ThermoStatus
 	ThermoStatus_InvalidArgument = 1,
 	ThermoStatus_OutOfMemory = 2,
 	ThermoStatus_InvalidPacket = 3,
-	ThermoStatus_SensorFault = 4
+	ThermoStatus_SensorFault = 4,
+	ThermoStatus_DeviceNotFound = 5,
+	ThermoStatus_UsbError = 6,
+	ThermoStatus_UnsupportedDevice = 7
 };
 
 /* Expose the handle type without revealing the device layout. */
@@ -31,7 +34,7 @@ extern "C" {
 	   The caller must provide a pointer to a writable double. */
 	THERMODEVICE_API int __cdecl Thermo_GetSimulatedTemperature(double* pTemperatureC);
 
-	/* Opens a simulated device. Pass an empty output slot.
+	/* Opens the first present compatible USB device. Pass an empty output slot.
 	   On failure, a valid output slot is set to null. */
 	THERMODEVICE_API int __cdecl Thermo_Open(ThermoHandle** ppHandle);
 
