@@ -1,6 +1,7 @@
 /* Select export declarations when compiling the DLL implementation. */
 #define THERMODEVICE_BUILD
 #include "ThermoDevice.h"
+#include "FreshResponse.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -8,10 +9,12 @@
 #include <Windows.h>
 #include <SetupAPI.h>
 #include <winusb.h>
+#include <bcrypt.h>
 
 /* Link the Windows USB API used by the DLL. */
 #pragma comment(lib, "Winusb.lib")
 #pragma comment(lib, "Setupapi.lib")
+#pragma comment(lib, "Bcrypt.lib")
 
 /* Own the real USB resources and receive state for one open device. */
 struct st_ThermoDevice
@@ -25,8 +28,7 @@ struct st_ThermoDevice
 	UCHAR BulkOutPipe = 0;
 
 	/* Assemble a complete wire frame across successful reads. */
-	std::uint8_t Packet[10] = {};
-	ULONG PacketBytes = 0;
+	st_FreshResponse Response;
 };
 
 /**************************************************************************************************/
@@ -94,12 +96,13 @@ static int OpenUsbDevice(st_ThermoDevice* pDevice)
 	pDevice->Device = CreateFileW(
 		pDetail->DevicePath,
 		GENERIC_READ | GENERIC_WRITE,
-		FILE_SHARE_READ | FILE_SHARE_WRITE,
+		0,
 		0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, 0);
 	SetupDiDestroyDeviceInfoList(Devices);
 
 	if (pDevice->Device == INVALID_HANDLE_VALUE)
-		return ThermoStatus_UsbError;
+		return GetLastError() == ERROR_SHARING_VIOLATION
+			? ThermoStatus_DeviceBusy : ThermoStatus_UsbError;
 
 	if (!WinUsb_Initialize(pDevice->Device, &pDevice->UsbInterface))
 		return ThermoStatus_UsbError;
@@ -121,7 +124,7 @@ static int OpenUsbDevice(st_ThermoDevice* pDevice)
 		if (Pipe.PipeType != UsbdPipeTypeBulk)
 			continue;
 
-		/* Remember the first bulk endpoint in each direction. OUT is optional. */
+		/* Requests use OUT; matching responses use IN. */
 		if ((Pipe.PipeId & 0x80) != 0)
 		{
 			if (!pDevice->BulkInPipe)
@@ -133,47 +136,30 @@ static int OpenUsbDevice(st_ThermoDevice* pDevice)
 		}
 	}
 
-	/* Receiving temperatures requires a bulk IN endpoint. */
-	return pDevice->BulkInPipe ? ThermoStatus_Ok : ThermoStatus_UnsupportedDevice;
-}
+	if (!pDevice->BulkInPipe || !pDevice->BulkOutPipe)
+		return ThermoStatus_UnsupportedDevice;
 
-/**************************************************************************************************/
+	/* Reject streaming firmware before any temperature can be mistaken as fresh. */
+	WINUSB_SETUP_PACKET Setup = {};
+	Setup.RequestType = 0xC0;
+	Setup.Request = THERMO_CAPABILITY_REQUEST;
+	Setup.Length = 5;
+	UCHAR Capabilities[5] = {};
+	const UCHAR Expected[] = {'T', 'H', 2, THERMO_REQUEST_SIZE, THERMO_RESPONSE_SIZE};
+	ULONG Received = 0;
+	if (!WinUsb_ControlTransfer(pDevice->UsbInterface, Setup, Capabilities,
+		sizeof(Capabilities), &Received, 0) || Received != sizeof(Capabilities) ||
+		std::memcmp(Capabilities, Expected, sizeof(Expected)) != 0)
+		return ThermoStatus_UnsupportedDevice;
 
-static int DecodeTemperaturePacket(
-	const std::uint8_t* pData,
-	std::size_t DataSize,
-	double* pTemperatureC)
-{
-	/* Validate pointers and frame length before accessing any bytes. */
-	if (!pData || !pTemperatureC)
-		return ThermoStatus_InvalidArgument;
-
-	if (DataSize != 10)
-		return ThermoStatus_InvalidPacket;
-
-	/* Accept the defined message type and reject reserved flag bits. */
-	if ((pData[0] != 0x01u) || ((pData[1] & 0xFEu) != 0u))
-		return ThermoStatus_InvalidPacket;
-
-	/* A sensor fault makes the temperature field unusable. */
-	if ((pData[1] & 0x01u) != 0u)
-		return ThermoStatus_SensorFault;
-
-	/* Assemble the little-endian field using unsigned shifts. */
-	const std::uint32_t Bits =
-		static_cast<std::uint32_t>(pData[2]) |
-		(static_cast<std::uint32_t>(pData[3]) << 8) |
-		(static_cast<std::uint32_t>(pData[4]) << 16) |
-		(static_cast<std::uint32_t>(pData[5]) << 24);
-
-	/* Interpret two's-complement values without an out-of-range signed cast. */
-	std::int64_t TemperatureX100 = Bits;
-
-	if ((Bits & 0x80000000u) != 0u)
-		TemperatureX100 -= 0x100000000LL;
-
-	/* Modify caller storage only after every validation succeeds. */
-	*pTemperatureC = static_cast<double>(TemperatureX100) / 100.0;
+	/* Preserve unread bytes when assembling a frame one byte at a time. */
+	UCHAR AllowPartial = TRUE;
+	UCHAR AutoFlush = FALSE;
+	if (!WinUsb_SetPipePolicy(pDevice->UsbInterface, pDevice->BulkInPipe,
+		ALLOW_PARTIAL_READS, sizeof(AllowPartial), &AllowPartial) ||
+		!WinUsb_SetPipePolicy(pDevice->UsbInterface, pDevice->BulkInPipe,
+		AUTO_FLUSH, sizeof(AutoFlush), &AutoFlush))
+		return ThermoStatus_UsbError;
 
 	return ThermoStatus_Ok;
 }
@@ -182,8 +168,8 @@ static int DecodeTemperaturePacket(
 
 int __cdecl Thermo_GetApiVersion(void)
 {
-	/* Retain the version value used by the DLL replacement exercise. */
-	return 2;
+	/* Version 3 guarantees a requested conversion instead of queued samples. */
+	return 3;
 }
 
 /**************************************************************************************************/
@@ -241,61 +227,53 @@ int __cdecl Thermo_ReadTemperature(
 	if (!pHandle || !pTemperatureC)
 		return ThermoStatus_InvalidArgument;
 
-	/* Use a one-second read budget for this initial API. */
+	/* A random token distinguishes this read from late replies and older sessions. */
+	std::uint8_t Request[THERMO_REQUEST_SIZE] = {};
+	std::memcpy(Request, THERMO_REQUEST_MAGIC, 4);
+	if (BCryptGenRandom(0, Request + 4, THERMO_TOKEN_SIZE,
+		BCRYPT_USE_SYSTEM_PREFERRED_RNG) < 0)
+		return ThermoStatus_UsbError;
+
+	/* Bound the command and its response together, including stale-frame skipping. */
 	const ULONG TimeoutMs = 1000;
 	const ULONGLONG Started = GetTickCount64();
+	ULONG WriteTimeout = TimeoutMs;
+	if (!WinUsb_SetPipePolicy(pHandle->UsbInterface, pHandle->BulkOutPipe,
+		PIPE_TRANSFER_TIMEOUT, sizeof(WriteTimeout), &WriteTimeout))
+		return ThermoStatus_UsbError;
 
-	while (pHandle->PacketBytes < sizeof(pHandle->Packet))
+	ULONG Written = 0;
+	if (!WinUsb_WritePipe(pHandle->UsbInterface, pHandle->BulkOutPipe,
+		Request, sizeof(Request), &Written, 0))
+		return GetLastError() == ERROR_SEM_TIMEOUT
+			? ThermoStatus_Timeout : ThermoStatus_UsbError;
+	if (Written != sizeof(Request))
+		return ThermoStatus_UsbError;
+
+	while (true)
 	{
-		/* Recalculate the remaining budget rather than restarting it per chunk. */
 		const ULONGLONG Elapsed = GetTickCount64() - Started;
-
 		if (Elapsed >= TimeoutMs)
 			return ThermoStatus_Timeout;
 
-		ULONG RemainingTimeout = TimeoutMs - static_cast<ULONG>(Elapsed);
-
-		if (!WinUsb_SetPipePolicy(
-			pHandle->UsbInterface,
-			pHandle->BulkInPipe,
-			PIPE_TRANSFER_TIMEOUT,
-			sizeof(RemainingTimeout),
-			&RemainingTimeout))
-		{
+		ULONG Remaining = TimeoutMs - static_cast<ULONG>(Elapsed);
+		if (!WinUsb_SetPipePolicy(pHandle->UsbInterface, pHandle->BulkInPipe,
+			PIPE_TRANSFER_TIMEOUT, sizeof(Remaining), &Remaining))
 			return ThermoStatus_UsbError;
-		}
 
-		/* Request only the bytes still needed for this frame. */
-		const ULONG RemainingBytes =
-			static_cast<ULONG>(sizeof(pHandle->Packet)) - pHandle->PacketBytes;
-
-		ULONG BytesRead = 0;
-
-		if (!WinUsb_ReadPipe(
-			pHandle->UsbInterface,
-			pHandle->BulkInPipe,
-			pHandle->Packet + pHandle->PacketBytes,
-			RemainingBytes,
-			&BytesRead,
-			0))
-		{
-			const DWORD ErrorCode = GetLastError();
-
-			return (ErrorCode == ERROR_SEM_TIMEOUT)
+		/* Read one byte into the persistent frame window. WinUSB retains the rest
+		   of each short USB packet (ALLOW_PARTIAL_READS default is enabled). */
+		UCHAR Byte = 0;
+		ULONG Received = 0;
+		if (!WinUsb_ReadPipe(pHandle->UsbInterface, pHandle->BulkInPipe,
+			&Byte, 1, &Received, 0))
+			return GetLastError() == ERROR_SEM_TIMEOUT
 				? ThermoStatus_Timeout : ThermoStatus_UsbError;
-		}
 
-		/* Retain successful partial reads, including across a later timeout. */
-		pHandle->PacketBytes += BytesRead;
+		int Status = ThermoStatus_InvalidPacket;
+		if (Received && pHandle->Response.Feed(Byte, Request + 4, Status, pTemperatureC))
+			return Status;
 	}
-
-	/* Consume this complete frame; the decoder writes output only on success. */
-	pHandle->PacketBytes = 0;
-
-	return DecodeTemperaturePacket(
-		pHandle->Packet,
-		sizeof(pHandle->Packet),
-		pTemperatureC);
 }
 
 /**************************************************************************************************/

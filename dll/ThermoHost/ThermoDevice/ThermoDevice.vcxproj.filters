@@ -20,6 +20,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FreshResponse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\protocol\thermo_wire.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="ThermoDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>

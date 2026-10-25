@@ -74,6 +74,16 @@ bool tud_vendor_control_xfer_cb(
         return true;
     }
 
+#ifdef THERMO_FRESH_READS
+    /* Advertise the fresh-read protocol without changing driver descriptors. */
+    if (request->bmRequestType == 0xC0 && request->bRequest == 0x22 &&
+        request->wIndex == 0 && request->wValue == 0) {
+        static const uint8_t capabilities[] = {'T', 'H', 2, 20, 32};
+        return tud_control_xfer(rhport, request, (void*)capabilities,
+                                sizeof(capabilities));
+    }
+#endif
+
     /* 0xC0 = device-to-host, vendor request, device recipient.
        Index 7 selects the descriptor set; value zero is required. */
     if ((request->bmRequestType != 0xC0) ||

@@ -18,7 +18,8 @@ enum ThermoStatus
 	ThermoStatus_DeviceNotFound = 5,
 	ThermoStatus_UsbError = 6,
 	ThermoStatus_UnsupportedDevice = 7,
-	ThermoStatus_Timeout = 8
+	ThermoStatus_Timeout = 8,
+	ThermoStatus_DeviceBusy = 9
 
 };
 
@@ -40,7 +41,10 @@ extern "C" {
 	   On failure, a valid output slot is set to null. */
 	THERMODEVICE_API int __cdecl Thermo_Open(ThermoHandle** ppHandle);
 
-	/* Requires a live handle returned by Thermo_Open.
+	/* Requests a new conversion after this call (up to 1000 ms total).
+	   Requires version-2 request/response firmware and exclusive device access.
+	   Serialize operations on each handle; do not close during a read.
+	   Requires a live handle returned by Thermo_Open.
 	   Writes degrees Celsius on success; leaves output unchanged on failure.
 	   Null arguments are rejected. */
 	THERMODEVICE_API int __cdecl Thermo_ReadTemperature(

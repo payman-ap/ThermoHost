@@ -151,13 +151,14 @@ cmake --build build --target thermometer_usb
 ```
 
 Flash `firmware/build/thermometer_usb.uf2` through BOOT mode, with the MAX6675
-wired as above, and run the existing Windows console. The `USB sample` lines
-now show actual temperatures. A disconnected thermocouple returns SensorFault
+wired as above, and build/run the Windows console (DLL API version 3). Each read now requests
+a new conversion; the console runs until Ctrl+C by default. A disconnected thermocouple returns SensorFault
 (4) without changing the caller's output. Restore wiring with USB disconnected.
 
-The `live-thermometer-winusb` tag preserves the tested complete system. It
-delivers queued samples, so readings and faults can be delayed by buffered data.
-See [live thermometer notes](docs/live_thermometer.md) for verification and limits.
+The `live-thermometer-winusb` tag preserves the earlier tested streaming system.
+Current code removes its backlog through request/response acquisition. New DLL
+and firmware must be used together. See [fresh-read verification](docs/fresh_reads.md)
+for commands, remaining board checks, and initial-phase completion criteria.
 
 ## Learning notes
 

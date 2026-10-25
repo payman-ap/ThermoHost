@@ -1,3 +1,9 @@
+# Historical streaming milestone
+
+This page describes tag `live-thermometer-winusb`. Current firmware uses
+[fresh request/response reads](fresh_reads.md); the queue limitation below is
+addressed by that design; see its notes for completed and pending board checks.
+
 # MAX6675 acquisition over WinUSB
 
 ## Firmware target

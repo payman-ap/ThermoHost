@@ -1,68 +1,55 @@
-# Thermometer wire protocol, version 1
+# Fresh-read protocol (version 2)
 
-## Purpose
+DLL API version 3 uses this protocol with `thermometer_usb`. The exported C
+function signatures are unchanged. [Version 1](protocol_v1.md) documents the
+previous streaming exercise, preserved by tag `live-thermometer-winusb` and
+branch `packet-playground` for the earlier packet exercises.
 
-Define the bytes exchanged between firmware and the Windows DLL independently
-of the microcontroller. The DLL converts the fixed-point temperature to the
-public API's `double` in degrees Celsius.
+## Compatibility and ownership
 
-This protocol is specified but not yet implemented or tested over USB.
+The vendor interface GUID, VID/PID and endpoints are unchanged. An IN vendor
+control request (`bmRequestType=0xC0`, request `0x22`, value/index zero, length 5)
+returns `54 48 02 14 20` (TH, version 2, request size 20, response size 32).
+The DLL checks this at open and returns UnsupportedDevice (7) for old firmware.
+Only one client may open the device; a sharing violation returns DeviceBusy (9).
 
-## Correction to the original roadmap
+## Command on bulk OUT 0x01
 
-The roadmap proposed an 8-byte frame with signed 16-bit `temp_x100`.
-That field can represent only -327.68 through 327.67 degrees C and cannot
-cover the MAX6675's full positive measurement range.
+| Offset | Bytes | Meaning |
+| --- | --- | --- |
+| 0 | 4 | ASCII `THQ2` |
+| 4 | 16 | Opaque request token |
 
-Use signed 32-bit `temp_x100` instead. The resulting frame is **10 bytes**.
-There is no requirement for this application frame to have a power-of-two size.
-Any later implementation for Project 1 must use this same format to share the DLL.
+The DLL generates a fresh random token for each read. The device restarts the
+MAX6675 conversion after receiving the command, waits 250 ms while servicing
+USB, then reads the sensor. A later complete command supersedes a pending one.
+No measurements are transmitted while idle.
 
-## Temperature frame
+## Response on bulk IN 0x81
 
-All multibyte integers are **little endian** (least significant byte first).
-Signed integers use two's-complement representation.
+| Offset | Bytes | Meaning |
+| --- | --- | --- |
+| 0 | 4 | ASCII `THR2` |
+| 4 | 1 | Flags: bit 0 thermocouple open; other bits zero |
+| 5 | 3 | Reserved, zero |
+| 8 | 4 | Signed two's-complement temperature x100, little endian |
+| 12 | 4 | Device uptime at sensor read, milliseconds, little endian |
+| 16 | 16 | Exact request token echoed |
 
-| Byte offset | Size | Field | Meaning |
-| --- | --- | --- | --- |
-| 0 | 1 | `type` | `0x01`: version 1 temperature frame |
-| 1 | 1 | `flags` | Bit 0: open thermocouple; other bits reserved, zero |
-| 2 | 4 | `temp_x100` | Signed 32-bit temperature in hundredths of a degree C |
-| 6 | 4 | `timestamp_ms` | Unsigned 32-bit milliseconds since device boot |
+Native structures are never serialized. The shared constants are in
+`protocol/thermo_wire.h`. The DLL accepts only a response with the current
+request token, retains partial frames, and skips old responses or framing noise.
+A timed-out request's late reply cannot satisfy the next read except for the
+negligible possibility of a 128-bit random-token collision. This token is
+correlation data, not authentication.
 
-- With flags zero, `temp_x100 / 100.0` gives degrees Celsius.
-- If bit 0 is set, the temperature is invalid. The firmware writes zero in
-  `temp_x100`, and the receiver must report a sensor fault rather than 0 C.
-- Unknown types or reserved flag bits must be treated as unsupported frames,
-  rather than interpreted as valid temperatures.
-- The timestamp wraps modulo 2^32 and starts over on reboot. It is not wall time.
-- The MAX6675's quarter-degree counts convert exactly using `counts * 25`;
-  floating-point arithmetic is not needed to construct its temperature field.
-- Encode and decode byte arrays explicitly. Do not send a native C/C++ struct
-  directly: compiler padding, alignment, and machine byte order are not the protocol.
+A read has one 1000 ms budget covering command write and response assembly.
+Faults, invalid frames, timeout and USB errors leave caller output unchanged.
+A matching frame with invalid reserved bits returns InvalidPacket (3); a fault
+returns SensorFault (4). Timestamps are not yet exposed through the public API.
+Serialize operations on each handle; do not close it during a read.
 
-## Examples
-
-Valid 25.50 C reading, timestamp 1000 ms:
-
-```text
-01 00 F6 09 00 00 E8 03 00 00
-```
-
-Here, `0x000009F6` is 2550, and `0x000003E8` is 1000.
-
-Open thermocouple, timestamp 1000 ms:
-
-```text
-01 01 00 00 00 00 E8 03 00 00
-```
-
-## Separation from the DLL API
-
-An opaque device handle is a process-local pointer, never a wire field.
-The DLL keeps USB handles and receive state private. Clients receive operation
-status and decoded values, not firmware structs or raw USB handles.
-
-The initial WinUSB transport will carry these frames from device to host.
-USB descriptors, endpoint configuration, buffering, and timeout behavior are
-subsequent implementation steps.
+The bytewise parser favors simplicity at this sensor's low sample rate; this
+is not a high-throughput streaming design. Timeout means no successful current
+response, not a claim about the sensor's physical condition. Close/reopen after
+transport errors; automatic reconnection is outside this initial phase.

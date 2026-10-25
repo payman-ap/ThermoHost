@@ -109,3 +109,6 @@ pico_enable_stdio_uart(thermometer_usb 0)
 pico_set_program_name(thermometer_usb "ThermoHost USB thermometer")
 pico_set_program_version(thermometer_usb "0.1")
 pico_add_extra_outputs(thermometer_usb)
+
+# Only the live target implements fresh request/response protocol version 2.
+target_compile_definitions(thermometer_usb PRIVATE THERMO_FRESH_READS=1)

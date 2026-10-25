@@ -95,7 +95,7 @@ process exit statuses were not separately shown.
 
 ## Binary packet decoder checkpoint
 
-- [Protocol specification](protocol.md): 10-byte frames, little-endian signed
+- [Historical protocol specification](protocol_v1.md): 10-byte frames, little-endian signed
   32-bit hundredths of degrees C, fault flags, and a device timestamp.
 - This corrects the roadmap's signed 16-bit hundredths field, which would
   overflow above 327.67 degrees C.

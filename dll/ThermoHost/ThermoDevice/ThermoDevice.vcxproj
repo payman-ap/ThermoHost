@@ -147,6 +147,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ThermoDevice.h" />
+    <ClInclude Include="FreshResponse.h" />
+    <ClInclude Include="..\..\..\protocol\thermo_wire.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
