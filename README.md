@@ -23,7 +23,10 @@ implicit and explicit loading. Qt integration is deferred.
   negative, fault, unknown-type, reserved-flag, and truncated-frame cases were tested.
 - Firmware encodes the same frames and prints them as hex text over USB CDC;
   real temperature and open-thermocouple packets were verified on the board.
-- Custom WinUSB firmware and real USB reads through the DLL are not implemented yet.
+- The separate `usb_probe` firmware enumerates as a vendor device and Windows
+  automatically binds Microsoft's `winusb.sys`; verified in Device Manager.
+- Device discovery and real USB temperature reads through the DLL are not
+  implemented yet; the DLL still reads its simulated packet.
 
 ## Repository layout
 
@@ -112,6 +115,7 @@ With USB disconnected, wire the MAX6675 as follows:
 - [DLL basics and verified failure tests](docs/dll_basics.md)
 - [Binary packet specification](docs/protocol.md)
 - [Firmware packet encoding and board tests](docs/firmware_packets.md)
+- [WinUSB enumeration probe and driver binding](docs/winusb_setup.md)
 - [Project 3 roadmap](docs/roadmaps/project3_rp2040_zero_thermometer.md)
 - [Learning prompt](docs/prompts/codex_prompt_project3.md)
 
