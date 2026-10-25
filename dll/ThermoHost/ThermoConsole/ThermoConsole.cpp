@@ -129,6 +129,9 @@ int main()
 
 	std::cout << "Handle read status: " << HandleReadStatus << '\n';
 
+	/* Show whether a failed read preserved the caller's original value. */
+	std::cout << "Output after handle read: " << HandleTemperatureC << '\n';
+
 	if (HandleReadStatus == ThermoStatus_Ok)
 	{
 		std::cout << "Handle temperature: " << HandleTemperatureC << " C\n";

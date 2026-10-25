@@ -19,6 +19,8 @@ implicit and explicit loading. Qt integration is deferred.
   invalid open arguments and null-safe close calls.
 - Handle-based temperature reads access private device state and reject null
   handles or output pointers without modifying the caller's output on failure.
+- The DLL decodes a simulated 10-byte little-endian temperature frame. Valid,
+  negative, fault, unknown-type, reserved-flag, and truncated-frame cases were tested.
 - Custom WinUSB firmware and real USB reads through the DLL are not implemented yet.
 
 ## Repository layout
@@ -54,7 +56,8 @@ Open status: 0
 Null handle status: 1
 Output after rejected read: -999
 Handle read status: 0
-Handle temperature: 25 C
+Output after handle read: 25.5
+Handle temperature: 25.5 C
 Null output status: 1
 Device closed
 Null open status: 1
@@ -63,6 +66,20 @@ Null close completed
 
 The value 2 is from a DLL replacement exercise. It does not yet represent a
 formally versioned production API. This exercise does not require the board.
+
+## Packet experiment checkpoint
+
+`packet-playground` starts at the tested decoder checkpoint, before WinUSB
+hardware integration. To experiment in a separate checkout:
+
+```powershell
+git clone --branch packet-playground https://github.com/payman-ap/ThermoHost.git ThermoHost-packets
+```
+
+Continue packet experiments on that branch; hardware integration continues on
+`main`. The tag `packet-decoder-snapshot` preserves the original checkpoint even
+after either branch acquires more commits. The snapshot contains source and notes;
+build the binaries locally using the instructions above.
 
 ## Firmware
 
@@ -91,6 +108,7 @@ With USB disconnected, wire the MAX6675 as follows:
 - [Session 1: first firmware and USB console](docs/session1.md)
 - [Session 2: MAX6675 acquisition](docs/session2.md)
 - [DLL basics and verified failure tests](docs/dll_basics.md)
+- [Binary packet specification](docs/protocol.md)
 - [Project 3 roadmap](docs/roadmaps/project3_rp2040_zero_thermometer.md)
 - [Learning prompt](docs/prompts/codex_prompt_project3.md)
 

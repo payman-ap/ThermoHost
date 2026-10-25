@@ -27,8 +27,8 @@
 - Errors capture `GetLastError` before cleanup or output operations.
 - Function pointers must match the exported signature and must not be used
   after releasing the DLL.
-- Current console writes its function-pointer type directly. A shared
-  declaration can instead supply it with `decltype(&Thermo_GetApiVersion)`;
+- The console initially wrote its function-pointer type directly. It now uses
+  the shared declaration with `decltype(&Thermo_GetApiVersion)`;
   this unevaluated expression does not create an imported function call.
 - A header alone does not create a runtime DLL dependency. A project
   reference was still present when last inspected, but the current program
@@ -93,10 +93,43 @@ process exit statuses were not separately shown.
 - No reads are attempted on dangling non-null handles; those remain outside
   the API contract.
 
+## Binary packet decoder checkpoint
+
+- [Protocol specification](protocol.md): 10-byte frames, little-endian signed
+  32-bit hundredths of degrees C, fault flags, and a device timestamp.
+- This corrects the roadmap's signed 16-bit hundredths field, which would
+  overflow above 327.67 degrees C.
+- The private decoder checks arguments, exact frame length, message type,
+  reserved flag bits, and the sensor fault bit before writing output.
+- Unsigned shifts assemble the four temperature bytes; a 64-bit intermediate
+  handles the signed two's-complement interpretation without an out-of-range cast.
+- Timestamp bytes are defined but not yet decoded or exposed by the DLL API.
+- `Thermo_ReadTemperature` decodes the simulated packet in the private device
+  object; the older fixed-value helper still returns 25 C independently.
+
+User-verified exercises:
+
+| Input | Status | Output behavior |
+| --- | --- | --- |
+| Valid 25.50 C frame | 0 | Returns 25.5 C |
+| Open-thermocouple flag | 4 | Preserves -999 sentinel |
+| Unknown message type 0x02 | 3 | Preserves -999 sentinel |
+| Reserved flag bit 0x02 | 3 | Preserves -999 sentinel |
+| Signed -10.25 C frame | 0 | Returns -10.25 C |
+| Reported frame length 9 | 3 | Preserves -999 sentinel |
+
+After testing, restored the valid 25.50 C packet and the full frame length;
+the user confirmed normal results. Existing null-argument and cleanup exercises
+also continued to pass.
+
+This checkpoint is the starting point for branch `packet-playground` and tag
+`packet-decoder-snapshot`. The branch can evolve with packet experiments;
+the tag identifies the original tested source snapshot.
+
 ## Next
 
-The open/read/close sequence now uses private device state. Continue toward
-WinUSB while preserving the C API and handle ownership contract.
+Continue toward firmware encoding and WinUSB on `main`, preserving the C API
+and handle ownership contract.
 Qt is deferred at the user's request.
 
 ## References

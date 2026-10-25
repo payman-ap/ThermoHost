@@ -12,7 +12,9 @@ enum ThermoStatus
 {
 	ThermoStatus_Ok = 0,
 	ThermoStatus_InvalidArgument = 1,
-	ThermoStatus_OutOfMemory = 2
+	ThermoStatus_OutOfMemory = 2,
+	ThermoStatus_InvalidPacket = 3,
+	ThermoStatus_SensorFault = 4
 };
 
 /* Expose the handle type without revealing the device layout. */
