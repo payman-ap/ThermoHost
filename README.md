@@ -13,8 +13,10 @@ implicit and explicit loading. Qt integration is deferred.
 - A native x64 DLL and console client build with Visual Studio 2019 and C++17.
 - Implicit linking and explicit loading with `LoadLibraryW`/`GetProcAddress` work.
 - Missing-DLL and missing-export error handling have been tested.
-- The DLL exports a simulated-temperature function with status codes and an
-  output parameter. Calling that new function from the client is the next exercise.
+- Simulated-temperature reads return status codes and write through an output
+  parameter; successful reads and null-pointer rejection have been tested.
+- Opaque handles support opening and closing a simulated device, including
+  invalid open arguments and null-safe close calls.
 - Custom WinUSB firmware and real USB reads through the DLL are not implemented yet.
 
 ## Repository layout
@@ -43,6 +45,13 @@ Current console output:
 
 ```text
 Explicitly loaded DLL API version: 2
+Read status: 0
+Temperature: 25 C
+Null pointer status: 1
+Open status: 0
+Device closed
+Null open status: 1
+Null close completed
 ```
 
 The value 2 is from a DLL replacement exercise. It does not yet represent a

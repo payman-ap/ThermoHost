@@ -47,10 +47,40 @@ The code returns process exit status 1 for load failure and 2 for lookup
 failure. The pasted outputs verified the printed Windows error codes;
 process exit statuses were not separately shown.
 
+## Status codes and output parameters
+
+- Added `Thermo_GetSimulatedTemperature(double*)`, returning an integer
+  status and writing 25.0 degrees C through the caller's output pointer.
+- Null output pointers return `ThermoStatus_InvalidArgument` without a write.
+- The console includes the shared header and uses `decltype` for its
+  dynamically resolved function signatures.
+- User-confirmed output: API version 2, read status 0, temperature 25 C,
+  and null-pointer status 1.
+- Source review confirmed export lookups are checked, Windows errors
+  are saved before cleanup, and all calls precede `FreeLibrary`.
+
+## Opaque handles and lifetime
+
+- The public header aliases the forward-declared `st_ThermoDevice` as
+  `ThermoHandle`; its fields are defined only in the DLL source.
+- `Thermo_Open` allocates a simulated device in the DLL with
+  `new (std::nothrow)` and returns it through a pointer-to-pointer.
+- A null output slot pointer returns `ThermoStatus_InvalidArgument`.
+  A valid output slot is cleared before allocation. Allocation failure has
+  an explicit `ThermoStatus_OutOfMemory` path, but has not been forced in tests.
+- `Thermo_Close` deletes the object in the DLL. Closing null is allowed;
+  each non-null live handle must be closed exactly once before unloading.
+- The caller clears its local handle after closing it. Other copies, if any,
+  would still be dangling; arbitrary or previously closed handles are invalid.
+- The console resolves and checks both lifecycle exports before opening.
+- The user confirmed open status 0, a successful close, null-open status 1,
+  and completion of a null-close call, alongside the earlier temperature tests.
+- The simulated-temperature helper is still independent of the handle.
+
 ## Next
 
-Practice status codes and output parameters using a simulated temperature,
-then introduce an opaque device handle before implementing WinUSB.
+Add a handle-based temperature read so that the open/read/close sequence uses
+the private device state, then proceed toward WinUSB.
 Qt is deferred at the user's request.
 
 ## References
