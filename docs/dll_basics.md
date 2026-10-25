@@ -75,12 +75,28 @@ process exit statuses were not separately shown.
 - The console resolves and checks both lifecycle exports before opening.
 - The user confirmed open status 0, a successful close, null-open status 1,
   and completion of a null-close call, alongside the earlier temperature tests.
-- The simulated-temperature helper is still independent of the handle.
+- The original simulated-temperature helper remains independent of the handle.
+
+## Handle-based temperature reads
+
+- `Thermo_ReadTemperature` reads the temperature from the private device object.
+- Null handles and null output pointers return invalid-argument status before
+  accessing state or modifying output.
+- During the first client test, the reads were placed after Close and after
+  clearing the handle. The intended valid-handle read therefore returned status 1.
+- Moved all handle reads before Close and added brief comments to the public
+  header, DLL implementation, and console exercise blocks.
+- Agent verification: built both projects with MSBuild for Debug x64, then ran
+  the rebuilt console successfully (exit status 0).
+- Confirmed null-handle status 1 with output still -999, live-handle status 0
+  with temperature 25 C, and null-output status 1, followed by device cleanup.
+- No reads are attempted on dangling non-null handles; those remain outside
+  the API contract.
 
 ## Next
 
-Add a handle-based temperature read so that the open/read/close sequence uses
-the private device state, then proceed toward WinUSB.
+The open/read/close sequence now uses private device state. Continue toward
+WinUSB while preserving the C API and handle ownership contract.
 Qt is deferred at the user's request.
 
 ## References

@@ -17,6 +17,8 @@ implicit and explicit loading. Qt integration is deferred.
   parameter; successful reads and null-pointer rejection have been tested.
 - Opaque handles support opening and closing a simulated device, including
   invalid open arguments and null-safe close calls.
+- Handle-based temperature reads access private device state and reject null
+  handles or output pointers without modifying the caller's output on failure.
 - Custom WinUSB firmware and real USB reads through the DLL are not implemented yet.
 
 ## Repository layout
@@ -49,6 +51,11 @@ Read status: 0
 Temperature: 25 C
 Null pointer status: 1
 Open status: 0
+Null handle status: 1
+Output after rejected read: -999
+Handle read status: 0
+Handle temperature: 25 C
+Null output status: 1
 Device closed
 Null open status: 1
 Null close completed
