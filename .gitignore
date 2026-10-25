@@ -1,0 +1,43 @@
+# Generated firmware and native Windows build outputs
+build/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+Win32/
+ipch/
+.vs/
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.exp
+*.lib
+*.dll
+*.exe
+*.bin
+*.elf
+*.uf2
+*.hex
+*.map
+*.dis
+*.tlog/
+*.lastbuildstate
+*.VC.db
+*.VC.opendb
+
+# Per-user IDE state and machine-specific configuration
+.vscode/
+*.vcxproj.user
+*.suo
+*.user
+*.sdf
+*.opensdf
+
+# Local image conversion used to inspect the supplied board photo
+/rp2040_board_preview.png
+
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
