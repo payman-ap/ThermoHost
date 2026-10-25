@@ -25,7 +25,9 @@ implicit and explicit loading. Qt integration is deferred.
   real temperature and open-thermocouple packets were verified on the board.
 - The separate `usb_probe` firmware enumerates as a vendor device and Windows
   automatically binds Microsoft's `winusb.sys`; verified in Device Manager.
-- Device discovery and real USB temperature reads through the DLL are not
+- The console discovers the real device, retrieves its path, initializes WinUSB,
+  and verifies two 64-byte bulk endpoints (OUT 0x01 and IN 0x81).
+- WinUSB integration inside the DLL and real temperature transfers are not
   implemented yet; the DLL still reads its simulated packet.
 
 ## Repository layout
@@ -85,6 +87,21 @@ Continue packet experiments on that branch; hardware integration continues on
 `main`. The tag `packet-decoder-snapshot` preserves the original checkpoint even
 after either branch acquires more commits. The snapshot contains source and notes;
 build the binaries locally using the instructions above.
+
+## WinUSB diagnostic checkpoint
+
+The `winusb-console-probe` tag preserves the verified device discovery,
+WinUSB initialization, and endpoint inspection exercise before USB ownership
+moves into the DLL. Branch `winusb-diagnostics` starts at the same checkpoint
+for independent hardware diagnostic experiments.
+
+```powershell
+git clone --branch winusb-diagnostics https://github.com/payman-ap/ThermoHost.git ThermoHost-usb-diagnostics
+```
+
+Build the Windows solution locally, and use `usb_probe.uf2` on the board for
+this exercise. The board checks use real USB; the subsequent DLL temperature
+checks still use the simulated packet.
 
 ## Firmware
 

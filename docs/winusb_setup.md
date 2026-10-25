@@ -85,12 +85,34 @@ descriptor uses `bConfigurationValue = 1`.
   revision changed together, so this test does not isolate the contribution
   of Windows caching versus descriptor scope.
 
+## Windows console probe
+
+- SetupAPI searches present interfaces using our generated interface GUID.
+- The user reported successful connected and disconnected detection.
+- The two-call `SetupDiGetDeviceInterfaceDetailW` pattern retrieves a
+  variable-length wide-character device path. `cbSize` uses the fixed
+  structure size rather than the allocation size.
+- The user confirmed a path containing VID/PID 1209:0001, the board's serial,
+  and our interface GUID.
+- `CreateFileW` opens it with read/write access and `FILE_FLAG_OVERLAPPED`.
+- `WinUsb_Initialize` succeeds on the real board.
+- Interface and pipe queries report interface 0, two bulk endpoints:
+  OUT 0x01 and IN 0x81, each with a maximum packet size of 64 bytes.
+- All query error paths release acquired resources. Successful cleanup calls
+  `WinUsb_Free` before `CloseHandle`; the SetupAPI set remains alive until
+  interface queries finish and is then destroyed.
+- The existing simulated DLL tests continue to pass afterward. No temperature
+  data has been transferred over the real USB interface yet.
+
+Milestone tag: `winusb-console-probe`. Diagnostic experiment branch:
+`winusb-diagnostics`. Both start at this verified console-probe checkpoint;
+ongoing DLL integration continues on `main`.
+
 ## Next
 
-Enumerate the registered interface GUID from Windows code and verify discovery
-of the board. Then open it with WinUSB and inspect its bulk endpoints before
-adding temperature transfers. The current probe only services USB requests;
-it does not acquire or transmit sensor frames.
+Move the verified discovery/open/endpoint logic behind the DLL's opaque handle,
+then add firmware transmission and actual USB reads. The current board probe
+only services USB requests; it does not acquire or transmit sensor frames.
 
 ## References
 
