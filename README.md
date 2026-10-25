@@ -31,9 +31,14 @@ implicit and explicit loading. Qt integration is deferred.
   handles, and remembers its bulk endpoints. Connected and absent-board cases
   were tested.
 - The board transmits known 42.25 C test frames over bulk IN, and the DLL reads
-  and decodes them successfully. Real sensor acquisition over WinUSB is next.
+  and decodes them successfully.
 - Twenty consecutive real USB reads passed. Disabling board transmission while
   keeping USB connected produced timeout status 8 after 1000 ms with output unchanged.
+- The new `thermometer_usb` target combines actual MAX6675 acquisition with
+  WinUSB transmission. Twenty real sensor reads passed through the DLL, with
+  changing temperatures, sensor-fault propagation, and successful cleanup.
+- Reads currently return queued samples. Buffered older data can precede a
+  newly occurring sensor fault; a latest-sample policy is not implemented yet.
 
 ## Repository layout
 
@@ -137,6 +142,23 @@ With USB disconnected, wire the MAX6675 as follows:
 | CS | GP1 |
 | SCK | GP2 |
 
+## Live thermometer
+
+Build the sensor firmware from the `firmware` directory in the Pico SDK terminal:
+
+```powershell
+cmake --build build --target thermometer_usb
+```
+
+Flash `firmware/build/thermometer_usb.uf2` through BOOT mode, with the MAX6675
+wired as above, and run the existing Windows console. The `USB sample` lines
+now show actual temperatures. A disconnected thermocouple returns SensorFault
+(4) without changing the caller's output. Restore wiring with USB disconnected.
+
+The `live-thermometer-winusb` tag preserves the tested complete system. It
+delivers queued samples, so readings and faults can be delayed by buffered data.
+See [live thermometer notes](docs/live_thermometer.md) for verification and limits.
+
 ## Learning notes
 
 - [Session 1: first firmware and USB console](docs/session1.md)
@@ -145,6 +167,7 @@ With USB disconnected, wire the MAX6675 as follows:
 - [Binary packet specification](docs/protocol.md)
 - [Firmware packet encoding and board tests](docs/firmware_packets.md)
 - [WinUSB enumeration probe and driver binding](docs/winusb_setup.md)
+- [MAX6675 over WinUSB integration](docs/live_thermometer.md)
 - [Project 3 roadmap](docs/roadmaps/project3_rp2040_zero_thermometer.md)
 - [Learning prompt](docs/prompts/codex_prompt_project3.md)
 

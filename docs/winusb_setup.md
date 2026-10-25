@@ -166,8 +166,10 @@ transfer and no-data timeout exercise before real sensor acquisition.
 
 ## Next
 
-Replace the known test frame with MAX6675 acquisition, keeping frequent TinyUSB
-servicing and the existing frame format. The default test transmitter is enabled.
+Real acquisition is now implemented and board-verified in the separate
+`thermometer_usb` target; see [live thermometer notes](live_thermometer.md).
+The constant-frame probe remains available for independent transport tests.
+Next, expose sample metadata and define freshness behavior for queued readings.
 
 ## References
 

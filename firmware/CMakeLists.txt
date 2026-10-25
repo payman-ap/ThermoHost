@@ -83,3 +83,29 @@ pico_set_program_name(usb_probe "ThermoHost USB probe")
 pico_set_program_version(usb_probe "0.1")
 
 pico_add_extra_outputs(usb_probe)
+
+# Real MAX6675 acquisition over the already-tested vendor USB interface.
+add_executable(thermometer_usb
+    thermometer_usb.c
+    usb/usb_descriptors.c
+    usb/winusb_descriptors.c
+)
+
+target_include_directories(thermometer_usb PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/usb
+)
+
+target_link_libraries(thermometer_usb
+    pico_stdlib
+    pico_unique_id
+    hardware_spi
+    tinyusb_device
+)
+
+# This target uses only the custom vendor interface, without a console interface.
+pico_enable_stdio_usb(thermometer_usb 0)
+pico_enable_stdio_uart(thermometer_usb 0)
+
+pico_set_program_name(thermometer_usb "ThermoHost USB thermometer")
+pico_set_program_version(thermometer_usb "0.1")
+pico_add_extra_outputs(thermometer_usb)
