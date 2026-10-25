@@ -21,6 +21,8 @@ implicit and explicit loading. Qt integration is deferred.
   handles or output pointers without modifying the caller's output on failure.
 - The DLL decodes a simulated 10-byte little-endian temperature frame. Valid,
   negative, fault, unknown-type, reserved-flag, and truncated-frame cases were tested.
+- Firmware encodes the same frames and prints them as hex text over USB CDC;
+  real temperature and open-thermocouple packets were verified on the board.
 - Custom WinUSB firmware and real USB reads through the DLL are not implemented yet.
 
 ## Repository layout
@@ -109,6 +111,7 @@ With USB disconnected, wire the MAX6675 as follows:
 - [Session 2: MAX6675 acquisition](docs/session2.md)
 - [DLL basics and verified failure tests](docs/dll_basics.md)
 - [Binary packet specification](docs/protocol.md)
+- [Firmware packet encoding and board tests](docs/firmware_packets.md)
 - [Project 3 roadmap](docs/roadmaps/project3_rp2040_zero_thermometer.md)
 - [Learning prompt](docs/prompts/codex_prompt_project3.md)
 
