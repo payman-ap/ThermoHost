@@ -63,6 +63,12 @@ claim that behavior is implemented.
 4. No. Firmware can change descriptors and behavior on the same native USB
    hardware, as this project demonstrates.
 
+Additional chapter 5 questions: budget the actual full-speed link at 12 Mbit/s,
+not the specification family's 480 Mbit/s high-speed mode. A charging-power
+label leaves data mode, cable capabilities, host/device support, and actual
+payload behavior unspecified. Neither connector shape nor charging wattage
+proves a particular data throughput.
+
 ## Chapter 6
 
 1. Class information is supplied by interfaces when the whole-device class is
@@ -233,7 +239,69 @@ claim that behavior is implemented.
 4. A baseline separates new driver-model mistakes from board/protocol faults
    and preserves a way to compare observed behavior.
 
-## A final self-assessment
+## Extended WinUSB design
+
+For the hypothetical power supply, product firmware/library define units and
+calibration meaning; the host library defines command identity and retry
+policy; the operating system and firmware descriptors establish binding; the
+device and host together define safe shutdown behavior. Moving to Linux changes
+host access/discovery code, not the physical meaning of a millivolt or whether
+repeating an actuator command has a side effect. See
+[Chapter 7](07-what-winusb-is.md).
+
+## Chapter 25
+
+1. A portable private device object still corresponds conceptually to
+   `ThermoHandle`. A libusb device handle plus claimed-interface state supports
+   host transfers, but is not a type-compatible WinUSB handle. A dynamically
+   loaded Linux shared object could have a module reference, but a port need
+   not dynamically load its library at all; `HMODULE` has no mandatory one-to-one
+   counterpart in the proposed transport algorithm.
+2. USB setup fields and application bytes are independent of host API names.
+   Sending the same request tuple reaches the same device callback.
+3. Different backends can have different packet/overflow/retention behavior.
+   Receive suitable chunks, then feed bytes to the parser; do not assume
+   WinUSB pipe policy is a portable API contract.
+4. Permission failure means the process lacks access; interface ownership
+   means another driver/client has a claim; protocol mismatch means access
+   exists but the device does not provide the expected application behavior.
+5. No. A libusb Windows backend still needs a compatible underlying driver
+   arrangement and may use WinUSB itself.
+
+## Chapter 26
+
+1. Four-byte storage gives 640,000 B/s of samples. Each 32-scan payload is
+   `8 * 32 * 4 = 1024` bytes, plus 32 header bytes = 1056. At 625 blocks/s,
+   application traffic is `1056 * 625 = 660,000 B/s`. Efficiency is
+   `1024 / 1056 = 96.97 percent`. It requires at least seventeen 64-byte data
+   packets per complete block: sixteen full packets and a 32-byte remainder.
+2. `500,000 * 0.040 = 20,000` free bytes, before other queued data and margin.
+3. `16 * 1024 / 500,000 = 0.032768 s`, or 32.768 ms if initially empty.
+4. No. The difference remains 100,000 B/s. Fill time changes from 0.65536 to
+   1.31072 seconds for initially empty buffers; the average mismatch remains.
+5. Adding times models a result traversing sequential stages. Taking a minimum
+   of independent capacities models sustained throughput after overlapping
+   stages are active. Shared-resource demands can invalidate the independence
+   assumption and must be budgeted separately.
+
+## Chapter 27
+
+1. `2 * 48,000 * 4 = 384,000 B/s`, or 384 bytes/ms.
+2. It establishes one transport-capacity condition, not application scheduling,
+   complete clock behavior, successful transfers, or hard deadlines.
+3. Four buffers remain: `4 * 4096 / 8,000,000 = 0.002048 s`. The just-completed
+   buffer no longer represents posted future receive coverage. Counting all
+   five would overstate immediately available queued capacity.
+4. Drift is half as large, 2.4 sample frames/s or 14.4 B/s. The same empty
+   2880-byte buffer fills in 200 seconds under the simplified model. An
+   initially half-full buffer has half that one-direction margin.
+5. One defensible contract: stop acknowledgement specifies the final acquired
+   sequence, production ceases, transport drains every sequence through that
+   boundary, host storage confirms them or reports an explicit failure, and
+   only then may outstanding requests and buffers be retired. Other contracts
+   are possible, but “stop returned” must have a precise meaning.
+
+## Putting the course together
 
 Explain one successful request without using the phrase “USB magic.” Then
 explain an old-token response, a current sensor fault, a missing capability,
@@ -245,4 +313,4 @@ you understand the core system well enough to begin a bounded next experiment.
 
 ---
 
-[Previous: 23. Source atlas and primary reading](23-source-atlas-and-reading.md) · [Contents](README.md)
+[Previous: 23. Source atlas and primary reading](23-source-atlas-and-reading.md) · [Contents](README.md) · [Next: 25. Linux, libusb, and a portable thermometer library](25-linux-and-portability.md)

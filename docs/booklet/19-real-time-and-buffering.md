@@ -120,6 +120,13 @@ be required before the Windows driver question became the main issue.
 
 ## Check your understanding
 
+For a full numerical treatment, [Chapter 26](26-capacity-and-bottleneck-calculations.md)
+works from units through sample rates, frame headers, packet budgets, stage
+capacities, and queue sizes. [Chapter 27](27-designing-continuous-streams.md)
+then applies that method to audio-like streams, clock mismatch, and multiple
+queued asynchronous transfers. These chapters extend the timing concepts here
+without claiming that streaming has been added to the current firmware.
+
 1. Why does token matching not bound displayed sample age?
 2. At four produced and one consumed sample per second, what is idealized
    queue growth after ten seconds?

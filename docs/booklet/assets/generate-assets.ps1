@@ -176,4 +176,66 @@ Write-Label 'Elapsed time (seconds)' 500 760 650 60
 Write-Label 'Real buffers are finite: blocking or loss changes this model at capacity.' 65 830 1280 60 $script:Small
 Save-Figure 'queue-growth.png'
 
+New-Figure 1400 1120 'Same instrument, different host APIs'
+Write-Label 'Windows (current implementation)' 70 125 640 60
+Write-Label 'Linux (proposed port)' 780 125 570 60
+$leftLabels = @(
+    "ThermoDevice.dll`nProtocol, parser, ownership",
+    "Winusb.dll`nMicrosoft user-space API",
+    "Winusb.sys + USB stack`nWindows kernel access"
+)
+$rightLabels = @(
+    "Portable thermometer library`nProtocol, parser, ownership",
+    "libusb`nPortable user-space API",
+    "Linux USB access / usbfs`nKernel USB subsystem"
+)
+for ($i = 0; $i -lt 3; $i++) {
+    $y = 225 + 195 * $i
+    Draw-Box 70 $y 560 130 $leftLabels[$i] $script:Blue
+    Draw-Box 770 $y 560 130 $rightLabels[$i] $script:Purple
+    if ($i -lt 2) {
+        Draw-Segment 350 ($y + 132) 350 ($y + 185) $true
+        Draw-Segment 1050 ($y + 132) 1050 ($y + 185) $true
+    }
+}
+Draw-Segment 350 748 350 830
+Draw-Segment 1050 748 1050 830
+Draw-Segment 350 830 700 830
+Draw-Segment 1050 830 700 830
+Draw-Segment 700 830 700 875 $true
+Draw-Box 200 880 1000 120 "Same RP2040 + TinyUSB + MAX6675`nSame THQ2 / THR2 wire contract" $script:Green
+Write-Label 'Conceptual layers; libusb on Windows can also use WinUSB underneath.' 65 1045 1270 65 $script:Small
+Save-Figure 'platform-stacks.png'
+
+New-Figure 1400 1000 'Queued buffers cover a replenishment gap'
+Write-Label 'Model: 8,000,000 B/s, 4096 bytes/buffer, 2 ms replenishment gap.' 50 115 1300 70
+$plotLeft = 180; $plotTop = 240; $plotWidth = 1050; $plotHeight = 460
+for ($i = 0; $i -le 3; $i++) {
+    $y = $plotTop + $plotHeight - ($i / 3.2) * $plotHeight
+    Draw-Segment $plotLeft $y ($plotLeft + $plotWidth) $y $false ([System.Drawing.Color]::LightGray) 1
+    Write-Label ([string]$i) 110 ($y - 20) 60 50 $script:Small
+}
+Draw-Segment $plotLeft ($plotTop + $plotHeight) ($plotLeft + $plotWidth + 30) ($plotTop + $plotHeight) $true
+Draw-Segment $plotLeft ($plotTop + $plotHeight) $plotLeft ($plotTop - 25) $true
+Write-Label 'Coverage after one completion (ms)' 210 190 1100 50 $script:Small
+for ($n = 2; $n -le 7; $n++) {
+    $coverage = ($n - 1) * 4096 * 1000 / 8000000
+    $x = 230 + ($n - 2) * 170
+    $barHeight = $coverage / 3.2 * $plotHeight
+    $fill = if ($n -ge 5) { $script:Green } else { $script:Gold }
+    $brush = [System.Drawing.SolidBrush]::new($fill)
+    $script:Graphics.FillRectangle($brush, [float]$x, [float]($plotTop + $plotHeight - $barHeight), 90, [float]$barHeight)
+    $brush.Dispose()
+    $coverageLabel = $coverage.ToString('F3', [System.Globalization.CultureInfo]::InvariantCulture)
+    Write-Label $coverageLabel ($x - 5) ($plotTop + $plotHeight - $barHeight - 40) 140 50 $script:Small
+    Write-Label ([string]$n) ($x + 30) 715 70 50
+}
+$thresholdY = $plotTop + $plotHeight - 2 / 3.2 * $plotHeight
+Draw-Segment $plotLeft $thresholdY ($plotLeft + $plotWidth) $thresholdY $false ([System.Drawing.Color]::Firebrick) 3
+Write-Label '2 ms target' 1050 ($thresholdY + 10) 220 50 $script:Small
+Write-Label 'N: number of posted buffers before a completion' 300 780 1050 60
+Write-Label 'Coverage = (N - 1) x 4096 / 8,000,000 seconds' 220 855 1150 60
+Write-Label 'N = 5 is a modeled minimum, not a measured or universal queue-depth recommendation.' 65 935 1270 60 $script:Small
+Save-Figure 'stream-budget.png'
+
 $script:Font.Dispose(); $script:Small.Dispose(); $script:TitleFont.Dispose()

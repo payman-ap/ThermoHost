@@ -84,6 +84,24 @@ reference, not a repository dependency on a new absolute path.
 - [Windows USB driver-development overview](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-driver-development-guide): client-driver layering and official sample starting points.
 - [Using WDF to develop a driver](https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/using-the-framework-to-develop-a-driver): framework objects and callback model.
 
+## Sources for the expanded lectures
+
+- [Choosing a Windows USB driver model](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/winusb-considerations): historical availability and model capabilities.
+- [WinUSB isochronous operations](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/getting-set-up-to-use-windows-devices-usb): the Windows 8.1-era API extension and interval-aware host operations.
+- [USB 3.2 terminology](https://www.usb.org/sites/default/files/usb_3_2_language_product_and_packaging_guidelines_final.pdf): historical 3.x mode/rate naming.
+- [USB4 system overview](https://www.usb.org/sites/default/files/D1T1-3%20-%20USB4%20System%20Overview.pdf): original USB4 architecture and capabilities.
+- [USB4 version 2.0 announcement](https://www.usb.org/sites/default/files/2022-10/USB-IF%20USB%2080Gbps%20Announcement_FINAL_v2.pdf): 80 Gbit/s and optional asymmetric operation.
+- [Microchip USB frames](https://developerhelp.microchip.com/xwiki/bin/view/applications/usb/how-it-works/frame/): optimistic full-speed bulk packet budget used as a ceiling, not a performance promise.
+- [libusb overview](https://libusb.info/), [device handling](https://libusb.sourceforge.io/api-1.0/group__libusb__dev.html), [synchronous I/O](https://libusb.sourceforge.io/api-1.0/group__libusb__syncio.html), and [asynchronous I/O](https://libusb.sourceforge.io/api-1.0/group__libusb__asyncio.html): portable host interfaces and buffer/completion rules.
+- [libusb Windows backend](https://github.com/libusb/libusb/wiki/Windows): why a portable API can still use Microsoft's driver underneath.
+- [Linux host-side USB API](https://www.kernel.org/doc/html/latest/driver-api/usb/usb.html): kernel-side architecture, interfaces, and requests.
+
+Library provenance sources are linked beside the inventory in
+[Chapter 8](08-build-flash-and-load.md). Numerical examples beyond the actual
+thermometer are declared assumptions and derived arithmetic, checked by
+[check_calculations.py](tools/check_calculations.py); they are not measurements
+attributed to a vendor source.
+
 ## Local records and their limits
 
 [protocol.md](../protocol.md) is the current wire specification.

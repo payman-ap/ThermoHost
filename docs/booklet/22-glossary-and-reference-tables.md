@@ -101,6 +101,27 @@ different lower-level causes can map to the same public status.
 | Read waiting budget | 1000 ms | Hard wall-clock or open-operation bound. |
 | DLL API | Version 3 | Wire protocol version 2. |
 
+## Terms for the advanced lectures
+
+| Term | Meaning and useful distinction |
+| --- | --- |
+| Signaling rate | Nominal bits per second at a link layer; not useful application bytes per second. |
+| Payload throughput | Useful data delivered per second at a specifically named boundary. |
+| Sustainable rate | Rate a complete tested configuration maintains under stated conditions. |
+| Scan | One group containing one sample from each acquisition channel. |
+| Packed sample | Representation using only its specified bytes, such as three for a 24-bit value. |
+| Padded sample | A wider storage representation, such as four bytes for a 24-bit converter value. |
+| Utilization | Required rate divided by available capacity, using the same units and boundary. |
+| Service gap | Period during which a downstream stage does not consume produced data. |
+| Queue depth | Number of posted requests or queued objects; identify which queue is meant. |
+| ppm | Parts per million, useful for small clock-rate differences. |
+| Idempotent command | Repeating it has the same intended effect as applying it once, under the defined contract. |
+| libusb | Portable open-source host user-space API over operating-system-specific backends. |
+| usbfs | Linux USB user-space access facilities, distinct from a device-specific protocol. |
+| URB | USB request block in a kernel API; not identical to a user-space `libusb_transfer` object. |
+| Gadget driver | Linux device-side USB implementation, distinct from a Linux host driver. |
+| Isochronous interval | Periodic USB service opportunity; does not establish a desktop application deadline. |
+
 ## Common misconceptions corrected
 
 “The board sends whenever it wants” means it queues data; the host still

@@ -136,12 +136,94 @@ The same microcontroller can expose different personalities depending on its
 firmware. That explains why a COM port disappears after flashing the live
 vendor firmware without implying that USB has failed.
 
-## Check your understanding
+## USB generations: specification, mode, connector, and result
+
+Four descriptions are often collapsed into the word “USB”: a specification
+family, a supported signaling mode, a connector, and an observed application
+rate. Keep four columns in your engineering notes. A Type-C connector describes
+a physical connection; a specification version describes supported protocol
+features; a negotiated mode describes the actual link; payload throughput
+describes useful bytes delivered over time.
+
+For orientation, this table lists well-known nominal signaling-rate classes.
+It is not a table of guaranteed file-copy speed or a complete compatibility
+matrix. Decimal units are used: 1 Mbit/s is 1,000,000 bit/s.
+
+| Family / mode | Nominal rate | Engineering interpretation |
+| --- | --- | --- |
+| USB low speed | 1.5 Mbit/s | Small low-rate devices; not the thermometer's bulk mode. |
+| USB full speed | 12 Mbit/s | The RP2040's native runtime connection here. |
+| USB 2.0 high speed | 480 Mbit/s | Requires high-speed-capable device/controller hardware. |
+| USB 3.2 Gen 1 | 5 Gbit/s | Earlier names include USB 3.0 and USB 3.1 Gen 1. |
+| USB 3.2 Gen 2 | 10 Gbit/s | A higher-rate 3.x mode. |
+| USB 3.2 Gen 2x2 | 20 Gbit/s | Two-lane 3.x operation; exact device/host/cable support matters. |
+| Original USB4 capabilities | 20 or 40 Gbit/s | Multi-protocol architecture; not merely a larger USB 2.0 bulk packet. |
+| USB4 version 2.0 capability | Up to 80 Gbit/s symmetric | Optional asymmetric operation can allocate 120 Gbit/s one way and 40 the other. |
+
+For the USB 2.0 speed distinctions and signaling model, see the vendor
+[USB 101 introduction](https://www.infineon.com/dgdl/Infineon-AN57294_USB_101_An_Introduction_to_Universal_Serial_Bus_2.0-ApplicationNotes-v09_00-EN.pdf?fileId=8ac78c8c7cdc391c017d072d8e8e5256).
+The 3.x mapping is documented by
+[USB-IF's 3.2 terminology guide](https://www.usb.org/sites/default/files/usb_3_2_language_product_and_packaging_guidelines_final.pdf).
+For USB4, use the [original system overview](https://www.usb.org/sites/default/files/D1T1-3%20-%20USB4%20System%20Overview.pdf)
+and [version 2.0 announcement](https://www.usb.org/sites/default/files/2022-10/USB-IF%20USB%2080Gbps%20Announcement_FINAL_v2.pdf).
+These historical specification names remain useful when interpreting datasheets;
+consumer-facing naming can instead state a speed explicitly.
+
+### Example: a faster host port does not redesign the RP2040
+
+Plug this project into a hypothetical port capable of 40 Gbit/s. Its RP2040
+USB controller and firmware still use full-speed USB. A hub or host cannot turn
+the device into a high-speed peripheral through a new endpoint-size constant.
+The MAX6675 still needs its conversion interval as well.
+
+Compute the ratio of nominal rates: `40,000 Mbit/s / 12 Mbit/s` is about 3333.
+It would be incorrect to predict a 3333-fold increase in thermometer sample
+rate. Neither the device link mode nor the converter changed. This example
+shows why comparing a port label directly to sensor sample rate is a category
+error.
+
+### Example: USB 2.0 does not mean every device runs at 480 Mbit/s
+
+The project advertises a USB revision in its device descriptor and selects
+full speed in initialization. The specification revision field is not a
+speed command. High-speed operation requires different hardware support and
+appropriate stack configuration. Device, host, topology, and cable must have
+the required capabilities; a label on only one component is insufficient.
+
+The direction of backward compatibility is also not a promise that every
+optional high-rate mode exists in every newer host. Check the specific mode,
+not merely whether the marketing version number is larger. For this project,
+the simple decisive fact is the endpoint device's full-speed-only controller.
+
+### What changes for a programmer at higher rates?
+
+Application framing still matters, but endpoint packet limits, scheduling
+units, descriptors, host APIs, and controller buffering can differ. Full-speed
+and high-speed bulk maximum packet sizes differ; at high rates software
+allocation, memory copies, and request queue depth can become important.
+Do not copy a full-speed scheduling formula into a SuperSpeed calculation.
+
+USB4 also transports multiple protocol types through a routed architecture.
+An advertised fabric capacity is not a reservation of that entire capacity
+for one instrument's application data. The engineering habit is unchanged:
+identify the path and its bottleneck, then measure payload delivered at the
+boundary your application actually uses.
+
+For hand calculations that distinguish line rate, packet payload ceiling,
+application overhead, and sustainable throughput, continue to
+[Chapter 26](26-capacity-and-bottleneck-calculations.md).
+
+## Questions for the expanded USB model
 
 1. Explain both `0x81` and `0x01` from the host's perspective.
 2. Why does a full 64-byte FIFO not mean a 64-byte sensor measurement?
 3. Why can USB retry machinery coexist with stale application responses?
 4. Does changing from CDC to vendor USB necessarily require different hardware?
+
+5. A device reports USB specification revision 2.10 and uses full-speed
+   endpoints. Should you budget 12 or 480 Mbit/s, and why?
+6. A Type-C cable advertises charging power. What information is still missing
+   before you can predict application data throughput?
 
 Answers: [Chapter 5](24-answers.md#chapter-5).
 

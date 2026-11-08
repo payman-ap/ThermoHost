@@ -23,6 +23,23 @@ read chapters 7 and 13 through 17. For the USB device side, read chapters 5, 6,
 and 9 through 12. Return to chapter 19 before using this design as the basis of
 a time-sensitive application.
 
+The expanded edition adds a second level of study. Chapter 5 now separates
+USB generations, actual link modes, connectors, and payload rates. Chapter 7
+develops WinUSB from its historical motivation through instrument examples.
+Chapter 8 identifies the authors and roles of the SDKs, libraries, and tools.
+After the core course, use these advanced lectures:
+
+- [Chapter 25](25-linux-and-portability.md): Linux equivalents and a proposed
+  portable architecture. Read after chapters 7 and 14.
+- [Chapter 26](26-capacity-and-bottleneck-calculations.md): demand, overhead,
+  throughput, bottlenecks, and buffers calculated by hand. Read after chapter 19.
+- [Chapter 27](27-designing-continuous-streams.md): continuous acquisition,
+  asynchronous buffer ownership, clock drift, and stream contracts.
+
+The labs and reference chapters retain their original filenames so existing
+GitHub links remain useful. The advanced lectures have additional problems
+and [worked answers](24-answers.md#chapter-25).
+
 The manuscript is intended for booklet-scale study, roughly the requested
 50–150 printed-page range depending on font, code wrapping, and figure size.
 Markdown has no fixed pages; the word count and reading estimate are reported
@@ -57,6 +74,9 @@ not padding to an artificial page count.
 22. [Glossary and quick reference](22-glossary-and-reference-tables.md)
 23. [Source atlas and primary reading](23-source-atlas-and-reading.md)
 24. [Worked answers and reasoning checks](24-answers.md)
+25. [Linux, libusb, and a portable thermometer library](25-linux-and-portability.md)
+26. [Calculating capacity and finding the bottleneck](26-capacity-and-bottleneck-calculations.md)
+27. [Designing continuous streams from first principles](27-designing-continuous-streams.md)
 
 <!-- END CONTENTS -->
 
@@ -93,5 +113,13 @@ using Windows System.Drawing. The [booklet checker](tools/check_booklet.py)
 checks links, navigation, code excerpts, and worked byte examples using only
 Python's standard library. Images live in `assets/` and use relative Markdown
 links, so GitHub can display them on a tablet without a special viewer.
+
+The [calculation checker](tools/check_calculations.py) prints the worked rate,
+latency, queue, and clock-drift examples. It uses exact rational arithmetic to
+check the selected results and requires no third-party Python packages:
+
+```powershell
+python docs/booklet/tools/check_calculations.py
+```
 
 Start with [Chapter 1: the complete measurement](01-complete-measurement.md).
