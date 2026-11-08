@@ -1,125 +1,80 @@
-# From thermocouple to Windows: the ThermoHost booklet
+# USB systems: from bytes to device software
 
-A practical course in bytes, SPI, USB devices, WinUSB, native DLLs, and the
-engineering of timely measurements.
+A concise course in USB architecture, operating-system access, embedded stacks,
+application protocols, and timely acquisition. ThermoHost supplies worked
+examples; the concepts apply to other instruments and devices.
 
-**Read in order the first time.** This booklet assumes you can read simple C
-functions but have not written a USB driver. Each chapter introduces a small
-set of ideas, follows them into this repository, and finishes with questions.
-Worked answers and a sequence of practical labs are included. You do not need
-to change the working firmware to understand the explanations.
-
-This edition follows the root-level `ThermoHost/` layout, DLL API **3**, and
-wire protocol **2**, inspected on **8 November 2026**. The sensor is a MAX6675
-connected to a Waveshare RP2040-Zero. Firmware is C11; the Windows projects are
-C++17 using MSVC v142. Later changes may alter code excerpts. Links point to
-source files rather than frozen line numbers so they work in GitHub.
-
-## Reading routes
-
-For a full course, follow the numbered contents below. For a quick explanation
-of a measurement, read chapters 1, 10, 11, 15, and 16. For the Windows side,
-read chapters 7 and 13 through 17. For the USB device side, read chapters 5, 6,
-and 9 through 12. Return to chapter 19 before using this design as the basis of
-a time-sensitive application.
-
-The expanded edition adds a second level of study. Chapter 5 now separates
-USB generations, actual link modes, connectors, and payload rates. Chapter 7
-develops WinUSB from its historical motivation through instrument examples.
-Chapter 8 identifies the authors and roles of the SDKs, libraries, and tools.
-After the core course, use these advanced lectures:
-
-- [Chapter 25](25-linux-and-portability.md): Linux equivalents and a proposed
-  portable architecture. Read after chapters 7 and 14.
-- [Chapter 26](26-capacity-and-bottleneck-calculations.md): demand, overhead,
-  throughput, bottlenecks, and buffers calculated by hand. Read after chapter 19.
-- [Chapter 27](27-designing-continuous-streams.md): continuous acquisition,
-  asynchronous buffer ownership, clock drift, and stream contracts.
-
-The labs and reference chapters retain their original filenames so existing
-GitHub links remain useful. The advanced lectures have additional problems
-and [worked answers](24-answers.md#chapter-25).
-
-The manuscript is intended for booklet-scale study, roughly the requested
-50–150 printed-page range depending on font, code wrapping, and figure size.
-Markdown has no fixed pages; the word count and reading estimate are reported
-in [the publication notes](publication-notes.md). The goal is a useful course,
-not padding to an artificial page count.
+The book assumes basic familiarity with C functions, arrays, and pointers.
+Read the twelve chapters in order. Each introduces a concept, develops its
+mechanism or calculation, then applies it. Problems and answers are collected
+in Appendix A; source details and references stay in Appendices B and C.
 
 ## Contents
 
 <!-- CONTENTS -->
 
-1. [The complete measurement](01-complete-measurement.md)
-2. [Bits, bytes, hexadecimal, and units](02-bits-bytes-and-numbers.md)
-3. [Hardware and the meaning of a measurement](03-hardware-and-measurement.md)
-4. [SPI: from pins to a sensor word](04-spi-from-pins-to-word.md)
-5. [USB without the mystery](05-usb-mental-model.md)
-6. [Enumeration, descriptors, and device identity](06-enumeration-and-identity.md)
-7. [What WinUSB is and how it works](07-what-winusb-is.md)
-8. [Building, flashing, linking, and loading](08-build-flash-and-load.md)
-9. [Three firmware applications as controlled experiments](09-three-firmware-walkthroughs.md)
-10. [The live firmware as a state machine](10-live-firmware-state-machine.md)
-11. [The wire protocol, byte by byte](11-wire-protocol-workshop.md)
-12. [Control requests and the Microsoft descriptors](12-control-and-os-descriptors.md)
-13. [DLL design, C linkage, and ownership](13-dll-and-ownership.md)
-14. [Discovering and opening the Windows device](14-windows-device-discovery.md)
-15. [The host read: randomness, writes, and time budgets](15-host-read-and-timeouts.md)
-16. [Parsing fragmented and stale responses](16-parser-and-fragmentation.md)
-17. [The console: loading, looping, and stopping](17-console-loading-and-lifetime.md)
-18. [Testing the boundaries and diagnosing failures](18-testing-and-diagnosis.md)
-19. [Real-time thinking: latency, jitter, freshness, and queues](19-real-time-and-buffering.md)
-20. [From this project toward device-driver development](20-toward-device-drivers.md)
-21. [Practical labs: turn explanations into evidence](21-practical-labs.md)
-22. [Glossary and quick reference](22-glossary-and-reference-tables.md)
-23. [Source atlas and primary reading](23-source-atlas-and-reading.md)
-24. [Worked answers and reasoning checks](24-answers.md)
-25. [Linux, libusb, and a portable thermometer library](25-linux-and-portability.md)
-26. [Calculating capacity and finding the bottleneck](26-capacity-and-bottleneck-calculations.md)
-27. [Designing continuous streams from first principles](27-designing-continuous-streams.md)
+1. [Digital representation and communication](01-digital-foundations.md)
+2. [USB architecture and transfer types](02-usb-architecture.md)
+3. [Enumeration, descriptors, and identity](03-enumeration-and-descriptors.md)
+4. [USB drivers in Windows and Linux](04-operating-system-drivers.md)
+5. [Embedded USB stacks and TinyUSB](05-tinyusb.md)
+6. [Peripherals, sampling, and SPI](06-peripherals-and-acquisition.md)
+7. [Application protocols and message framing](07-protocols-and-framing.md)
+8. [Host libraries, APIs, and resource ownership](08-host-libraries-and-ownership.md)
+9. [State machines, partial I/O, and cancellation](09-state-machines-and-io.md)
+10. [Capacity, latency, and bottleneck calculations](10-capacity-and-bottlenecks.md)
+11. [Continuous streaming and real-time requirements](11-streaming-and-real-time.md)
+12. [Case study, experiments, and further driver work](12-thermohost-case-study.md)
+
+- [Appendix A. Exercises and worked answers](appendix-a-exercises.md)
+- [Appendix B. Software provenance and source atlas](appendix-b-source-atlas.md)
+- [Appendix C. Further reading](appendix-c-references.md)
 
 <!-- END CONTENTS -->
 
-## How to study
+## How the course fits together
 
-Keep the matching source file open beside the chapter when possible. Trace one
-successful call before tracing failures. For each code fragment, ask: who owns
-this memory, what units does this number use, when can this operation finish,
-and which side of the USB connection executes it? These questions expose more
-mistakes than memorizing function names.
+Chapters 1–3 establish representation, transport, and enumeration. Chapter 4
+explains why an OS needs drivers, then compares WinUSB and Linux/libusb within
+that model. Chapter 5 explains the other end of the cable through TinyUSB.
+Chapters 6–9 connect acquisition to protocols, host APIs, and I/O state.
+Chapters 10–11 calculate capacity and develop streaming requirements. Chapter
+12 tests the complete chain in the example repository.
 
-Quoted code is an excerpt of existing repository code unless explicitly marked
-as pseudocode or an exercise. Ellipses in an excerpt indicate omitted code, not
-compilable statements. Exercises propose changes in a separate experimental
-branch; they are not changes made by this booklet. All graphs are explanatory
-models, not measurements from the connected board.
+This organization replaces the earlier project-led 27-chapter edition.
+Overlapping explanations and separate advanced add-ons have been consolidated.
+The original edition remains available in Git history; this edition's chapter
+filenames follow the new learning sequence.
 
-## Important distinctions to keep nearby
+## Reading the examples
 
-| Terms | Difference in this project |
-| --- | --- |
-| DLL API 3 / wire protocol 2 | Application-facing function contract / bytes exchanged over USB. |
-| `firmware.uf2` / `thermometer_usb.uf2` | CDC terminal experiment / current vendor-USB thermometer. |
-| WinUSB / ThermoDevice | Microsoft's USB access system / your project-specific wrapper. |
-| USB packet / application frame | Transport-level unit / your 20- or 32-byte message. |
-| Resolution / accuracy | Smallest representable sensor step / closeness to physical truth. |
-| Fresh / instantaneous | Conversion begins after a request / result exists without delay. |
-| Timeout / hard deadline | Software stops waiting / completion is guaranteed by a bound. |
+Code blocks labeled C/C++ are excerpts from the linked repository files.
+They may omit surrounding code and are not standalone replacement programs.
+Pseudocode is labeled explicitly. Graphs and hypothetical acquisition scenarios
+are explanatory models, not measurements from the connected board.
 
-## Reproducing the booklet
+The example follows root-level `ThermoHost/`, Pico SDK 2.3.1, DLL API 3, and
+wire protocol 2, inspected on 8 November 2026. A Linux host port and continuous
+streaming designs are discussed as applications of the concepts, not as
+features already implemented by this repository. Version-specific API behavior
+should be checked against the installed SDK.
 
-The [asset generator](assets/generate-assets.ps1) creates the PNG illustrations
-using Windows System.Drawing. The [booklet checker](tools/check_booklet.py)
-checks links, navigation, code excerpts, and worked byte examples using only
-Python's standard library. Images live in `assets/` and use relative Markdown
-links, so GitHub can display them on a tablet without a special viewer.
+Markdown has no fixed page count. [Publication notes](publication-notes.md)
+give a disclosed length estimate and explain the checks used for this edition.
 
-The [calculation checker](tools/check_calculations.py) prints the worked rate,
-latency, queue, and clock-drift examples. It uses exact rational arithmetic to
-check the selected results and requires no third-party Python packages:
+## Reproducing figures and calculations
+
+Figures are ordinary PNG files in [assets](assets/), generated by
+[generate-assets.ps1](assets/generate-assets.ps1), so GitHub can display them
+on a tablet. The checkers require only Python's standard library:
 
 ```powershell
+python docs/booklet/tools/check_booklet.py
 python docs/booklet/tools/check_calculations.py
 ```
 
-Start with [Chapter 1: the complete measurement](01-complete-measurement.md).
+The first checks local links, navigation, source excerpts, and selected worked
+examples. The second prints the calculation results. Neither replaces source
+review or hardware testing.
+
+Begin with [Digital representation and communication](01-digital-foundations.md).

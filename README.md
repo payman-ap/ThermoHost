@@ -13,9 +13,10 @@ and DLL loading. The current console explicitly loads the DLL using
 The DLL is a user-mode library using Microsoft's existing `winusb.sys`, not a
 custom kernel driver. Qt integration and custom driver development are deferred.
 
-For a guided course through the hardware, firmware, USB, WinUSB, and DLL code,
-start with the [ThermoHost learning booklet](docs/booklet/README.md). It includes
-linked chapters, code walkthroughs, diagrams, practical labs, and worked answers.
+For a concept-first course in USB, Windows/Linux drivers, TinyUSB, protocols,
+and acquisition, start with [USB systems: from bytes to device software](docs/booklet/README.md).
+Its twelve chapters use ThermoHost as a worked example, with diagrams,
+calculations, exercises, and a source atlas.
 
 ## Current progress
 

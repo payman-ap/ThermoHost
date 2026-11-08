@@ -1,13 +1,14 @@
-# 26. Calculating capacity and finding the bottleneck
+# 10. Capacity, latency, and bottleneck calculations
 
-**Prerequisites:** chapters 2, 5, and 19. **Objective:** calculate demand,
-capacity, latency, and buffer requirements with a pencil, while identifying
-which numbers are theoretical ceilings, assumptions, or measurements.
+A capacity model compares required work with available service. Begin with units,
+then account for representation and framing, identify the limiting resource,
+and calculate buffering for temporary gaps. The model should label every
+number as a specification limit, an assumption, or a measurement.
 
-All instrument examples beyond ThermoHost in this chapter are hypothetical.
-The calculations are reproducible models, not benchmarks of the connected
-RP2040. A companion [calculation checker](tools/check_calculations.py) executes
-the same arithmetic using Python's standard library.
+The acquisition examples below are hypothetical and can be repeated by hand.
+The thermometer is used at the end to apply the same method to a different
+kind of bottleneck. The [calculation checker](tools/check_calculations.py)
+reproduces selected results with exact rational arithmetic.
 
 ## Begin with dimensions
 
@@ -40,36 +41,7 @@ These formulas describe application bytes. USB transaction overhead must still
 be accounted for separately. Never subtract it twice by using both a measured
 payload throughput and a second arbitrary USB-efficiency factor.
 
-## Example 1: the actual thermometer
-
-The conversion allowance is 0.250 s. Its ideal conversion-limited read rate is
-`1 / 0.250 = 4` reads/s before other overhead. A request contains 20 bytes and
-a response 32 bytes, so the two directions together carry:
-
-```text
-R_app = 4 reads/s * (20 + 32) bytes/read = 208 bytes/s
-```
-
-The full-speed signaling rate is 12,000,000 bit/s. Merely dividing the payload
-bit count by that number gives a serialization lower bound:
-
-```text
-t_payload = 52 bytes * 8 bits/byte / 12,000,000 bits/s
-          = 0.0000346667 s = 34.67 microseconds
-```
-
-That is not the actual request/response latency: it omits bus packet overhead,
-host scheduling, device processing, and the conversion itself. Its purpose is
-to show the scale difference. The conversion allowance is 250,000 microseconds,
-over seven thousand times this payload-only serialization term.
-
-The SPI word takes approximately `16 / 1,000,000 = 16 microseconds` of clocks.
-Suppose, solely as a model, total other overhead is 2 ms. Then one serialized
-read takes approximately `250 + 0.016 + 2 = 252.016 ms`, and rate is
-`1000 / 252.016 = 3.968` reads/s. Optimizing the transport's payload-only term
-cannot turn this converter into a 1 kHz sensor.
-
-## Example 2: a multi-channel acquisition demand
+## Example: calculate acquisition demand
 
 Suppose a different instrument produces 20,000 scans/s, each scan containing
 eight channels stored as packed three-byte values. Demand is:
@@ -89,7 +61,7 @@ conversions/s, plus settling/other constraints. Eight channels at 20 kscan/s
 does not mean one shared ADC performs only 20,000 conversions/s. The sensor-side
 rate budget comes before USB.
 
-## Example 3: calculate block overhead
+## Example: include block overhead
 
 Batch 32 scans and add a 32-byte application header:
 
@@ -180,6 +152,12 @@ both the resource-sharing assumptions and measured service rates.
 
 ## Calculate buffering from a service gap
 
+When average production exceeds average consumption, backlog grows until
+capacity imposes blocking or loss. A simple sample-count illustration uses
+four produced and one consumed per second: backlog grows by three per second.
+
+![Illustrative growth before a finite queue fills](assets/queue-growth.png)
+
 For a producer rate R bytes/s and a complete downstream service pause T seconds,
 required additional storage is at least `R * T`, excluding data already queued.
 At the example's 500,000 bytes/s and a 20 ms pause:
@@ -198,6 +176,35 @@ If consumption averages 400,000 bytes/s against 500,000 produced, the queue
 grows by 100,000 bytes/s. An initially empty 64 KiB queue fills in
 `65,536 / 100,000 = 0.65536 s`. More buffering postpones this failure but does
 not cure the long-term rate mismatch.
+
+## Case application: a conversion-limited thermometer
+
+The conversion allowance is 0.250 s. Its ideal conversion-limited read rate is
+`1 / 0.250 = 4` reads/s before other overhead. A request contains 20 bytes and
+a response 32 bytes, so the two directions together carry:
+
+```text
+R_app = 4 reads/s * (20 + 32) bytes/read = 208 bytes/s
+```
+
+The full-speed signaling rate is 12,000,000 bit/s. Merely dividing the payload
+bit count by that number gives a serialization lower bound:
+
+```text
+t_payload = 52 bytes * 8 bits/byte / 12,000,000 bits/s
+          = 0.0000346667 s = 34.67 microseconds
+```
+
+That is not the actual request/response latency: it omits bus packet overhead,
+host scheduling, device processing, and the conversion itself. Its purpose is
+to show the scale difference. The conversion allowance is 250,000 microseconds,
+over seven thousand times this payload-only serialization term.
+
+The SPI word takes approximately `16 / 1,000,000 = 16 microseconds` of clocks.
+Suppose, solely as a model, total other overhead is 2 ms. Then one serialized
+read takes approximately `250 + 0.016 + 2 = 252.016 ms`, and rate is
+`1000 / 252.016 = 3.968` reads/s. Optimizing the transport's payload-only term
+cannot turn this converter into a 1 kHz sensor.
 
 ## An engineering worksheet
 
@@ -223,10 +230,10 @@ and stress tests qualify real implementations.
 5. Why does adding pipeline-stage times answer a different question from taking
    the minimum of independent stage capacities?
 
-Worked answers: [Chapter 26](24-answers.md#chapter-26).
+Worked answers: [Appendix A](appendix-a-exercises.md#chapter-10).
 
 <!-- NAVIGATION -->
 
 ---
 
-[Previous: 25. Linux, libusb, and a portable thermometer library](25-linux-and-portability.md) · [Contents](README.md) · [Next: 27. Designing continuous streams from first principles](27-designing-continuous-streams.md)
+[Previous: 9. State machines, partial I/O, and cancellation](09-state-machines-and-io.md) · [Contents](README.md) · [Next: 11. Continuous streaming and real-time requirements](11-streaming-and-real-time.md)

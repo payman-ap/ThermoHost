@@ -1,13 +1,18 @@
-# 27. Designing continuous streams from first principles
+# 11. Continuous streaming and real-time requirements
 
-**Prerequisites:** chapters 10, 16, 19, and 26. **Objective:** design a sustained
-data path with explicit timing, buffer ownership, overload behavior, and
-completion rules. The examples in this chapter are design studies, not new
-features in the current thermometer.
+A fast average does not establish a real-time guarantee. A real-time requirement
+states when data or an action is required and what happens when it is late.
+Hard deadlines need defensible bounds; a soft real-time display may tolerate
+some lateness. Define acquisition rate, acceptable age, latency, and loss policy
+before choosing a driver or transfer type.
+
+The examples below examine continuous acquisition rather than a particular
+board. They are models, not measurements. Bulk USB on a general-purpose OS does
+not acquire hard deadlines through asynchronous calls or a custom kernel driver.
 
 ## A stream has its own clock
 
-The current host asks for a conversion and waits. A stream instead produces
+A request/response design starts acquisition for a command. A stream produces
 samples on a device-side schedule independent of each host function call.
 The host can start/stop acquisition and configure it, while results arrive in
 blocks. This separates the acquisition clock from desktop scheduling.
@@ -43,25 +48,14 @@ delay acceptable? Must every sample reach storage? How long can the device
 wait before discarding data? Those answers determine transport and buffer
 policy more directly than the label “fast.”
 
-## WinUSB can support more than this project's bulk path
+## Host support and device support must agree
 
-Modern WinUSB includes isochronous APIs starting with Windows 8.1. Applications
-register transfer buffers and submit interval-aware reads/writes, then examine
-completion and packet results. Microsoft documents this in its
-[WinUSB isochronous tutorial](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/getting-set-up-to-use-windows-devices-usb).
-That capability does not mean changing `WinUsb_ReadPipe` arguments alone turns
-the thermometer into an isochronous device.
-
-Device descriptors, TinyUSB configuration and class support, endpoint type,
-firmware production, host APIs, and protocol all need a consistent design.
-The current project enables a vendor class with bulk endpoints; the later
-design studies require deliberate changes and validation.
-
-On Linux or a portable host, libusb offers asynchronous and isochronous transfer
-facilities through its [asynchronous API](https://libusb.sourceforge.io/api-1.0/group__libusb__asyncio.html).
-The application still must run event handling and preserve buffers until
-completion. Merely using the word asynchronous does not create a worker,
-acquisition clock, or loss policy for you.
+WinUSB includes isochronous APIs on supported Windows versions; libusb also
+provides asynchronous isochronous facilities. A selected API cannot change a
+bulk device into an isochronous one. Descriptors, stack/class support, endpoint
+configuration, production timing, and host submission must describe the same
+design. See the [WinUSB isochronous guide](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/getting-set-up-to-use-windows-devices-usb)
+and [libusb asynchronous reference](https://libusb.sourceforge.io/api-1.0/group__libusb__asyncio.html).
 
 ## Worked example: stereo packed 24-bit audio
 
@@ -205,9 +199,8 @@ semantics under a specified workload. Include deliberate consumer stalls,
 device removal, and invalid/short transfer results. Distinguish observed maxima
 from proven deadlines.
 
-This is how the small thermometer grows into a serious acquisition exercise:
-retain its separation of transport, interpretation, and ownership, then define
-the new clock, queue, and loss contracts explicitly.
+A complete stream design defines its clock, queue, loss, and lifetime contracts
+in addition to its byte layout. Capacity alone is not a sufficient contract.
 
 ## Review problems
 
@@ -221,10 +214,10 @@ the new clock, queue, and loss contracts explicitly.
 5. Define stop semantics for a recorder that must preserve every already
    acquired sample before closing.
 
-Worked answers: [Chapter 27](24-answers.md#chapter-27).
+Worked answers: [Appendix A](appendix-a-exercises.md#chapter-11).
 
 <!-- NAVIGATION -->
 
 ---
 
-[Previous: 26. Calculating capacity and finding the bottleneck](26-capacity-and-bottleneck-calculations.md) · [Contents](README.md)
+[Previous: 10. Capacity, latency, and bottleneck calculations](10-capacity-and-bottlenecks.md) · [Contents](README.md) · [Next: 12. Case study, experiments, and further driver work](12-thermohost-case-study.md)

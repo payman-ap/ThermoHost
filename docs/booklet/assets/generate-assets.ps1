@@ -238,4 +238,25 @@ Write-Label 'Coverage = (N - 1) x 4096 / 8,000,000 seconds' 220 855 1150 60
 Write-Label 'N = 5 is a modeled minimum, not a measured or universal queue-depth recommendation.' 65 935 1270 60 $script:Small
 Save-Figure 'stream-budget.png'
 
+New-Figure 1400 1180 'TinyUSB: embedded device responsibilities'
+$stackLayers = @(
+    @('Application', 'Measurements, commands, descriptor data, callbacks'),
+    @('Class implementation', 'HID, CDC, vendor-specific, or another enabled class'),
+    @('USB device core', 'Enumeration, standard requests, device state'),
+    @('Device controller driver (DCD)', 'Adapter to the microcontroller USB peripheral'),
+    @('USB controller hardware', 'Endpoint transfers, signaling, hardware events')
+)
+for ($i = 0; $i -lt $stackLayers.Count; $i++) {
+    $y = 140 + 180 * $i
+    $fill = if ($i -eq 0) { $script:Green } elseif ($i -eq 4) { $script:Gold } else { $script:Blue }
+    Draw-Box 130 $y 1140 125 ($stackLayers[$i][0] + "`n" + $stackLayers[$i][1]) $fill
+    if ($i -lt 4) {
+        Draw-Segment 640 ($y + 130) 640 ($y + 170) $true
+        Draw-Segment 760 ($y + 170) 760 ($y + 130) $true
+    }
+}
+Write-Label 'Calls request work; callbacks/events return information.' 130 1060 1140 60
+Write-Label 'Interrupt events are deferred to task processing; application servicing is required.' 75 1120 1260 55 $script:Small
+Save-Figure 'tinyusb-stack.png'
+
 $script:Font.Dispose(); $script:Small.Dispose(); $script:TitleFont.Dispose()
