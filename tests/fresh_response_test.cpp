@@ -1,4 +1,4 @@
-#include "../dll/ThermoHost/ThermoDevice/FreshResponse.h"
+#include "../ThermoHost/ThermoDevice/FreshResponse.h"
 #include <cassert>
 #include <iostream>
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ThermoDevice.h"
-#include "../../../protocol/thermo_wire.h"
+#include "../../protocol/thermo_wire.h"
 #include <cstdint>
 #include <cstring>
 

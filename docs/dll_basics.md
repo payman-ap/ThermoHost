@@ -3,10 +3,10 @@
 ## Setup
 
 - Visual Studio 2019, MSVC v142, C++17, Debug x64.
-- Solution: `dll/ThermoHost/ThermoHost.sln`.
+- Solution: `ThermoHost/ThermoHost.sln`.
 - `ThermoDevice`: native Dynamic Library (.dll).
 - `ThermoConsole`: native console Application (.exe).
-- Shared output folder: `dll/ThermoHost/x64/Debug`.
+- Shared output folder: `ThermoHost/x64/Debug`.
 
 ## Exports and implicit linking
 

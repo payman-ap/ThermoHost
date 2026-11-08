@@ -27,7 +27,7 @@ Flash `firmware/build/thermometer_usb.uf2` using BOOT mode. The previous firmwar
 will produce UnsupportedDevice (7) with the updated DLL; this is intentional.
 No driver change is required because the USB interface descriptors are unchanged.
 
-From `dll/ThermoHost/x64/Debug`:
+From `ThermoHost/x64/Debug`:
 
 ```powershell
 .\ThermoConsole.exe --samples 5
@@ -63,7 +63,7 @@ adjust its vcvars64 path if using a different Visual Studio installation.
 The user flashed the updated firmware and supplied successful API-version-3
 runs with `--samples 3 --interval-ms 3000` and `--samples 3 --interval-ms 20000`.
 Each run returned exactly three successful measurements and closed normally.
-Reported read times were 234–250 ms; the 20-second-pause run included a change
+Reported read times were 234ï¿½250 ms; the 20-second-pause run included a change
 from about 23 C to 52.5 C. These confirm finite request/response operation and
 successful reads after idle pauses. Fault/recovery and Ctrl+C tests for this
 version have not yet been confirmed.
