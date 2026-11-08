@@ -13,6 +13,10 @@ and DLL loading. The current console explicitly loads the DLL using
 The DLL is a user-mode library using Microsoft's existing `winusb.sys`, not a
 custom kernel driver. Qt integration and custom driver development are deferred.
 
+For a guided course through the hardware, firmware, USB, WinUSB, and DLL code,
+start with the [ThermoHost learning booklet](docs/booklet/README.md). It includes
+linked chapters, code walkthroughs, diagrams, practical labs, and worked answers.
+
 ## Current progress
 
 - A native x64 DLL and console client build with Visual Studio 2019 and C++17.
