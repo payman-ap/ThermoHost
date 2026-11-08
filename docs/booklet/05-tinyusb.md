@@ -103,6 +103,33 @@ obtain serial-style data handling but still need a message format if commands
 and binary results are exchanged. “USB serial” is not itself a thermometer
 protocol.
 
+## Trace one command through the stack
+
+Suppose a hypothetical vendor instrument expects a twenty-byte command.
+Transport activity reaches the controller; its DCD records the relevant
+event; task processing advances the device/class work; the application can
+then read received bytes through the class API. The stages explain why a
+hardware interrupt does not itself mean a complete application command exists.
+
+Assume the application first reads eight bytes and later another twelve.
+After eight, it has an incomplete command. After twenty, it can validate its
+message format and decide what operation to perform. The vendor class supplies
+data access; it does not know whether byte 4 denotes a channel, token, or
+setpoint. That decision remains in application code.
+
+Now suppose the reply has thirty-two bytes but only ten are accepted into the
+transmit path on one iteration. The application retains twenty-two for a later
+attempt while continuing task servicing. This is a small cooperative pipeline:
+each layer makes progress when its inputs and downstream capacity allow it.
+The [architecture guide](https://docs.tinyusb.org/en/latest/reference/architecture.html)
+provides the stack/event context for this trace.
+
+If application code instead spends a long interval in unrelated computation,
+some deferred processing is postponed. Hardware interrupts and finite queues
+do not imply unlimited independent progress. In an RTOS design, a suitably
+scheduled USB task can provide that service; the product's command state still
+needs its own synchronization and ownership rules.
+
 ## Worked example: the thermometer's configuration
 
 The [local TinyUSB configuration](../../firmware/usb/tusb_config.h) contains:

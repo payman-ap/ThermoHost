@@ -33,6 +33,24 @@ Notice that decimal 20 and hexadecimal `0x20` differ. Confusing them changes a
 message length from twenty bytes to thirty-two. When reading a trace, establish
 the notation before interpreting values.
 
+## Reading weighted positions
+
+In binary, positions from the right have weights 1, 2, 4, 8, and so on.
+Thus `10000001` means `128 + 1`. In hexadecimal, `0x1234` means
+`1 * 4096 + 2 * 256 + 3 * 16 + 4 = 4660`. This is the same positional-number
+idea used in decimal, with a different base.
+
+An eight-bit unsigned value stops at 255 because all eight weights sum to
+255. In signed eight-bit two's complement, the same 256 patterns cover
+-128 through 127. Pattern `FF` is therefore 255 under one interpretation and
+-1 under the other. A cast changes a program's interpretation or conversion;
+it does not ask the sender which meaning was intended.
+
+This reasoning also makes byte-order mistakes visible. Little-endian bytes
+`34 12` reconstruct 4660. Reading them in reverse significance gives
+`0x3412 = 13330`. Both are ordinary positive numbers, so an endian error can
+produce plausible data rather than a crash.
+
 ## Fields inside a word
 
 Hardware often packs several fields into one integer. A **mask** selects bits;
@@ -117,6 +135,17 @@ For short elapsed intervals, unsigned subtraction is useful because arithmetic
 wraps modulo `2^32`. This supports periodic checks across one counter wrap
 when the interval assumptions hold. It is not a general clock-synchronization
 scheme.
+
+### Work a counter wrap explicitly
+
+Suppose a millisecond counter was `0xFFFFFFF0` and later reads `0x00000022`.
+There were sixteen ticks to wrap, then thirty-four more: elapsed time is
+50 ms. Unsigned 32-bit subtraction gives the same answer modulo `2^32`.
+
+The calculation assumes the observation interval is short enough that an
+unknown extra full wrap is impossible. A device restart would create another
+ambiguity. Arithmetic can handle a representation boundary; establishing that
+the clock has remained continuous is a separate system assumption.
 
 ## Example: a sensor result becomes a message
 

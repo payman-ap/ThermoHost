@@ -113,6 +113,25 @@ the real read path, including stale tokens, fragments, signed decoding, faults,
 and invalid flags. Additional experimental firmware should be clearly labeled
 and restored after tests rather than silently changing the baseline.
 
+### Read a result as a chain of evidence
+
+Suppose the console prints SensorFault on its first attempt. The status alone
+does not establish calibration or the precise physical defect, but the code
+path provides useful deductions: a library loaded, the open checks passed,
+a read found a matching current response, and that response carried the fault
+flag. Investigating DLL search paths first would ignore evidence that loading
+and substantial communication already succeeded.
+
+Now suppose Open returns UnsupportedDevice. No measurement attempt has yet
+completed. Investigate interface/endpoints/capability and the flashed target,
+rather than interpreting the result as a sensor fault. The implementation maps
+some capability-transfer errors to that same public status, so a diagnostic
+log of the failing API would refine the conclusion.
+
+A useful lab record therefore contains the operation stage, observed status,
+expected behavior, and remaining alternatives. This is more informative than
+“USB failed,” and lets a later change be assessed against the same evidence.
+
 ## Diagnose the first failed stage
 
 | Symptom | First investigation |
@@ -139,6 +158,18 @@ For timing work, record the build/commit, flashed image, topology, workload,
 sample count, and exact measured interval. An observed maximum is not a proven
 worst-case bound. For overload work, report sequence gaps and buffer policy,
 not only average throughput.
+
+### Change one variable in an experiment
+
+To test parser fragmentation, keep the bytes and token fixed and vary only
+the chunk boundaries. To test fresh acquisition, keep the build and protocol
+fixed and vary temperature during an idle interval. To test cleanup, keep the
+device configuration fixed and vary when stop is requested.
+
+Changing firmware, host code, wiring, and driver binding together can make a
+failure disappear without revealing its cause. Controlled experiments preserve
+the distinction between an implementation explanation and an observed result,
+which is the main purpose of this case study.
 
 ## The next step toward custom drivers
 

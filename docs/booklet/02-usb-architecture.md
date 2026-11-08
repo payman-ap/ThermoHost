@@ -50,6 +50,33 @@ The word “interrupt” names a USB transfer type. It does not mean that an
 application receives a CPU interrupt directly. Likewise “bulk” does not require
 large application messages; a small command can use bulk endpoints.
 
+## Following an ordinary bulk exchange
+
+For a conceptual USB 2.0 bulk OUT exchange, the host addresses the endpoint,
+supplies a data packet, and obtains the appropriate handshake. Acceptance at
+this layer means the endpoint accepted transport data. Firmware may still
+need to recognize the command and perform its operation.
+
+For IN, the host asks for data. A device that is temporarily unready can NAK;
+the host can try again later. Once data is ready, a successful data/acknowledgment
+exchange advances transport. NAK is therefore different from a final library
+timeout, which is a software waiting outcome. It is also different from an
+application reply reporting a broken sensor. Microsoft's
+[bulk-transfer discussion](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-bulk-and-interrupt-transfer)
+describes the transport exchange.
+
+Imagine a button instrument whose application returns a report only after a
+press. A pending host read can legitimately wait while the device has no
+report. The host application need not submit a new function call for every
+bus attempt; controller and driver work continues below that pending request.
+This connects the host-driven bus model to apparently asynchronous device
+events.
+
+Now imagine the endpoint accepts a “start measurement” command and immediately
+ACKs its bytes. That handshake cannot mean conversion is finished: the sensor
+may need another quarter second. A later application reply must communicate
+the result. Always name the layer when saying a request was “acknowledged.”
+
 ## Messages are above packets
 
 A bus transaction involves transport-level packets. A host I/O request can

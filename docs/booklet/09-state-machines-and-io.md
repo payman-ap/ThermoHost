@@ -27,6 +27,24 @@ waiting and ownership are organized. A GUI can remain responsive while a
 worker or completion path handles I/O, but the transport's scheduling properties
 remain relevant.
 
+## Deriving state from unfinished work
+
+Ask what must survive if the operation stops at this exact point. A conversion
+needs its deadline and request identity. A partial send needs its byte buffer
+and offset. A partial receive needs its accumulated bytes and interpretation
+state. These variables are the operation's memory between events.
+
+A transition should establish the next state's invariants. Entering “sending”
+requires a complete encoded response and offset zero. Leaving it requires all
+bytes to have been accepted, or an explicit failure/abandonment policy. A
+new request during conversion needs a defined transition too: reject it,
+queue it, or supersede old work. Those are different product behaviors.
+
+Writing these conditions before code often reveals missing cases. Two booleans
+can represent states conveniently, but they also permit combinations such as
+both “converting” and “response ready.” The implementation must ensure such
+combinations are either meaningful or unreachable.
+
 ## Partial progress is normal state
 
 Suppose a sender offers 32 bytes and a software FIFO accepts ten. The next
@@ -118,6 +136,18 @@ documented by Microsoft's [policy reference](https://learn.microsoft.com/en-us/w
 A software budget is still not a hard wall-clock return guarantee. OS
 descheduling, queueing, and completion processing affect observed duration.
 State the intended waiting policy separately from a proven worst-case bound.
+
+### Calculate the remaining wait
+
+For a 1000 ms request budget, suppose writing consumes 40 ms and processing
+old bytes consumes another 100 ms. The next wait should receive about 860 ms.
+If it consumes another 200 ms without a complete current reply, the following
+wait gets about 660 ms. Progress through unrelated bytes does not renew the
+original deadline.
+
+The clock must be checked between operations, and every blocking operation
+must fit the intended accounting policy. This arithmetic defines an intended
+budget; OS scheduling still affects the observed wall-clock return time.
 
 ## Cancellation is a transition, not immediate destruction
 

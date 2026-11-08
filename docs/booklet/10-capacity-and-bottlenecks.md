@@ -85,6 +85,19 @@ still contains one 800-byte application block. Counting those packets helps
 budget transport; it must not become a requirement that one host read returns
 exactly one block.
 
+### Change the block size and recalculate
+
+Keep the eight-channel, three-byte, 20 kscan/s source, but collect 64 scans
+instead of 32. Payload becomes 1536 bytes; adding the same 32-byte header gives
+1568 bytes/block. Block rate is `20,000 / 64 = 312.5` blocks/s, so traffic is
+`1568 * 312.5 = 490,000 B/s`.
+
+Compared with 500,000 B/s for 32-scan blocks, larger batching saves 10,000 B/s
+of header traffic. However, the oldest scan waits approximately
+`63 / 20,000 = 3.15 ms` for the block to fill, versus 1.55 ms previously.
+Larger blocks trade lower overhead for additional collection delay. Choosing
+a buffer size is therefore a latency decision as well as a throughput decision.
+
 ## Raw line rate is an optimistic ceiling
 
 Full speed's `12 Mbit/s / 8 = 1.5 MB/s` is not a sustainable application
@@ -149,6 +162,20 @@ This minimum-rate rule assumes stages can overlap and do not compete for an
 unaccounted shared resource. If acquisition and framing consume the same CPU,
 their CPU-time demands must be combined. A professional capacity model states
 both the resource-sharing assumptions and measured service rates.
+
+### Include fixed software cost
+
+Assume, hypothetically, each host API read has 4 microseconds of fixed overhead,
+excluding copying and parsing. At 500,000 B/s, requesting one byte per call
+would require 500,000 calls/s: `500,000 * 4 microseconds = 2 CPU-seconds/s`.
+One execution thread cannot sustain that model even though USB capacity may
+be sufficient.
+
+With full 4096-byte chunks, average call rate is about `500,000 / 4096 = 122.1`
+per second, giving roughly 0.488 ms/s of the same fixed cost. Actual short
+reads and other processing alter the result. The lesson is to count both
+bytes and operations; amortizing a fixed cost can matter more than changing
+the physical link. The assumed 4 microseconds is illustrative, not a benchmark.
 
 ## Calculate buffering from a service gap
 

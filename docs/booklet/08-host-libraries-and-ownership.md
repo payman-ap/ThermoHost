@@ -27,6 +27,26 @@ negative temperature is a legitimate number, so it should not double as a
 universal error indicator. On failure, a clearly documented output-preservation
 rule prevents accidental use of a partial new value.
 
+### Understand the pointer levels
+
+Consider an API that opens a device into caller-owned handle storage. The
+caller starts with an empty handle variable and passes its address. The open
+function needs a pointer to that storage so it can replace the value with a
+new device pointer. That explains a pointer-to-pointer parameter such as
+`ThermoHandle**`; the extra level has a concrete ownership purpose.
+
+A temperature read instead receives an existing device pointer and the
+address of a `double`. It uses the former to find private state and writes
+through the latter only after success. Passing the temperature value instead
+of its address would supply the wrong kind of argument; passing an arbitrary
+nonnull address would still violate the contract.
+
+Suppose caller storage initially contains 25.0 C and the next read times out.
+Output preservation leaves 25.0 unchanged, but does not label it a new valid
+measurement. The caller must inspect status before displaying it as current.
+Keeping old storage intact and establishing current validity are different
+guarantees.
+
 ## Opening is a sequence of acquisitions
 
 Host access normally proceeds through discovery, selection, open/claim,
@@ -72,6 +92,18 @@ resources. A single generic “free” operation is not correct for all three.
 The [WinUSB initialization reference](https://learn.microsoft.com/en-us/windows/win32/api/winusb/nf-winusb-winusb_initialize)
 also specifies the overlapped-capable file-handle requirement. That requirement
 does not mean every subsequent operation must be used asynchronously.
+
+### Trace a partial-open failure
+
+After a Windows device handle is acquired, WinUSB initialization can still
+fail. Cleanup must then close the device handle without attempting to free an
+unacquired WinUSB object. If initialization succeeds but capability checking
+fails, both resources must be released in dependency order.
+
+This is why empty initial states are useful: fields record which acquisitions
+actually happened. A cleanup routine can release only live resources. Publishing
+the opaque handle at the very end also prevents the client from observing
+an object whose initialization later fails.
 
 ## DLL loading and function pointers
 

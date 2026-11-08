@@ -72,6 +72,23 @@ def calculations():
     coverage_ms = Fraction((depth - 1) * transfer_bytes * 1000, stream_rate)
     assert depth == 5 and coverage_ms == Fraction(256, 125)
     assert (depth - 2) * transfer_bytes < stream_rate * replenish_seconds
+    # Additional teaching steps: batching, API cost, deadlines, occupied queues.
+    larger_payload = channels * 64 * bytes_per_sample
+    larger_rate = (larger_payload + header_bytes) * Fraction(scans_per_second, 64)
+    assert larger_payload == 1536 and larger_rate == 490_000
+    assert app_rate - larger_rate == 10_000
+    assert Fraction(63 * 1000, scans_per_second) == Fraction(63, 20)
+    byte_call_cpu_seconds = 500_000 * Fraction(4, 1_000_000)
+    chunk_call_cpu_ms = Fraction(500_000, 4096) * Fraction(4, 1000)
+    assert byte_call_cpu_seconds == 2
+    assert chunk_call_cpu_ms == Fraction(125, 256)
+    latency_allocation_ms = Fraction(155, 100) + 10 + 20 + 30
+    assert latency_allocation_ms == Fraction(1231, 20)
+    assert 100 - latency_allocation_ms == Fraction(769, 20)
+    occupied_queue_free = (64 - 60) * 1024
+    occupied_queue_coverage_ms = Fraction(occupied_queue_free * 1000, 500_000)
+    assert occupied_queue_free == 4096
+    assert occupied_queue_coverage_ms == Fraction(1024, 125)
     return [
         ('Thermometer reads/s (ideal)', reads_per_second),
         ('Thermometer application B/s', thermometer_traffic),
@@ -87,6 +104,11 @@ def calculations():
         ('10 ms buffer: drift fill seconds', audio_buffer / drift_bytes),
         ('Posted buffer count (model)', depth),
         ('After-completion coverage ms', coverage_ms),
+        ('64-scan blocks: application B/s', larger_rate),
+        ('One-byte calls: CPU-seconds/s', byte_call_cpu_seconds),
+        ('4096-byte calls: CPU-ms/s', chunk_call_cpu_ms),
+        ('Proposed latency allocation ms', latency_allocation_ms),
+        ('Occupied queue free coverage ms', occupied_queue_coverage_ms),
     ]
 
 

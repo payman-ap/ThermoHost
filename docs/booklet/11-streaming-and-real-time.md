@@ -10,6 +10,23 @@ The examples below examine continuous acquisition rather than a particular
 board. They are models, not measurements. Bulk USB on a general-purpose OS does
 not acquire hard deadlines through asynchronous calls or a custom kernel driver.
 
+## Turn a deadline into allocations
+
+Suppose a display requirement permits at most 100 ms from acquisition of the
+oldest scan to publication of its block. Proposed allocations might be
+1.55 ms for collection, 10 ms for device queueing, 20 ms for transport, and
+30 ms for host processing. Their sum is 61.55 ms, leaving 38.45 ms of margin.
+
+This arithmetic is useful because it identifies where evidence is needed.
+If the numbers were established upper bounds under the required conditions,
+they could support a timing argument. If they are only averages or guesses,
+the same sum is a planning worksheet, not proof of meeting the deadline.
+
+Queue capacity alone does not settle this question. A large queue may prevent
+loss while retaining data too long for the display. A small queue may keep
+age low by dropping data while violating a recorder's completeness requirement.
+State both age and loss expectations before selecting the buffering policy.
+
 ## A stream has its own clock
 
 A request/response design starts acquisition for a command. A stream produces
@@ -190,6 +207,18 @@ Document reconnect behavior too. Does a new session begin a new epoch? Do
 sequence numbers reset? Can a host distinguish a device restart from a wrap?
 Does stop acknowledge that sampling ended, that queued bytes drained, or both?
 These definitions matter more than the particular choice of C struct names.
+
+### Follow free capacity during a pause
+
+A 64 KiB queue with 60 KiB already occupied has only 4096 free bytes. At
+500,000 B/s, a complete consumer pause fills that free space in
+`4096 / 500,000 = 8.192 ms`. Quoting the allocation's 131 ms empty-buffer
+coverage would badly overstate the tolerance at that instant.
+
+The same reasoning applies to posted host transfers: distinguish allocated
+buffers from buffers actually available to receive. Some may be completed,
+under processing, or awaiting storage. A capacity model needs the state of
+resources, not merely the amount of memory reserved.
 
 ## Professional acceptance criteria
 

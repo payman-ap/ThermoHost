@@ -27,6 +27,21 @@ Validity is also specific. A disconnected-sensor flag reports a detected
 condition. Its absence does not prove calibration, correct placement, or an
 undamaged probe. Good transport and good measurement are separate claims.
 
+### Quantization and physical error
+
+For an ideal uniform quantizer that rounds to 0.25-degree steps, half a step
+is 0.125 degrees. A physical value near a boundary can therefore move between
+adjacent codes even when the underlying change is small. This is a model of
+representation error, not a statement that a real converter's total error is
+bounded by 0.125 degrees.
+
+Calibration error, reference-junction error, noise, and probe placement can
+be larger. Averaging repeated readings can reduce some varying noise under
+appropriate assumptions, but cannot automatically remove a constant offset.
+The distinction tells you which experiment to perform: repeated stationary
+readings investigate variation; comparison with a known reference investigates
+accuracy.
+
 ## SPI's responsibilities
 
 SPI is a synchronous serial connection. A controller generates a clock, and
@@ -115,6 +130,19 @@ a more explicit time model and appropriate result fields.
 The firmware restarts a conversion after a command and waits before reading.
 That establishes causal freshness for the requested measurement. It does not
 make the value instantaneous, or prove an upper bound on its age when displayed.
+
+### Two clocks in one measurement
+
+Imagine device uptime says conversion restarted at 1000 ms and readout
+occurred at 1250 ms. Those observations establish a 250 ms device-side interval.
+Separately, the host records a call beginning at its uptime 900000 ms and
+ending at 900280 ms: host-observed duration is 280 ms.
+
+Subtracting device timestamp 1250 from host timestamp 900280 does not give
+transport delay. Their zero points differ, and their rates may differ slightly.
+You can compare intervals within each clock without synchronization; comparing
+absolute events between clocks needs a relationship between them. This is why
+adding a timestamp field is only the beginning of a timing design.
 
 ## Observe the correct boundary
 

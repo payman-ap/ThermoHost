@@ -30,6 +30,33 @@ The answer precedes the choice of host API.
 
 ## Windows: WinUSB separates transport from product logic
 
+### What crosses the user/kernel boundary?
+
+An application owns a buffer in its virtual address space and asks an API to
+read or write. OS I/O machinery turns that operation into managed work for the
+device stack. Later, completion reports status and an actual byte count. The
+application reasons about its buffer and request; it does not need the USB
+controller's register addresses.
+
+This separation is useful because requests coexist with other processes and
+hardware events. If the cable is removed while a read is pending, the OS must
+resolve the request and device state rather than let the application continue
+assuming the hardware exists. Product software must then interpret the error
+and release its own resources. General device management and product recovery
+policy meet at that boundary.
+
+User mode also has limits. A library can validate and interpret data without
+becoming an operating-system driver. A framework driver running in user mode
+is still a driver because it participates in the framework's device/request
+lifecycle; a normal DLL loaded by a console does not gain that role simply
+by making USB calls. Execution location and responsibility are separate axes.
+
+With that distinction established, we can compare two practical user-space
+access routes below. The firmware's command bytes can be identical through
+either route even though the host objects and submission APIs differ.
+
+### Microsoft's generic access route
+
 Microsoft's WinUSB provides a generic route for private USB access. Its
 user-mode component, `Winusb.dll`, exposes API functions. Its kernel-mode
 component, `Winusb.sys`, can serve as the USB function driver. Your product

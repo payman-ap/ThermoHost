@@ -236,6 +236,12 @@ def check(chapters):
     assert ((0x0330 >> 3) & 0xFFF) * 25 == 2550
     assert ((0x0550 >> 3) & 0xFFF) * 25 == 4250
     assert 0x0554 & 4 and 10 + 20 + 132 == 162
+    assert int.from_bytes(bytes.fromhex('34 12'), 'little') == 4660
+    assert int.from_bytes(bytes.fromhex('34 12'), 'big') == 13330
+    assert (0x22 - 0xFFFFFFF0) % (1 << 32) == 50
+    assert struct.pack('<BBHHH', 0xC0, 0x22, 0, 0, 5) == bytes.fromhex(
+        'C0 22 00 00 00 00 05 00')
+    assert 3 + 10 + 19 == 32 and 1000 - 40 - 100 == 860
     calculations()
     if errors:
         raise SystemExit('\n'.join(errors))

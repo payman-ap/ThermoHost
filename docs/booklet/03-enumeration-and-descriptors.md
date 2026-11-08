@@ -49,6 +49,30 @@ vendor request, and recipient bits select the device. `0xC0` here is not an
 endpoint address. A request's meaning depends on the full field tuple, not
 only on its one-byte code. See the [control-transfer overview](https://learn.microsoft.com/en-us/windows-hardware/drivers/usbcon/usb-control-transfer).
 
+### Read a control request as concrete bytes
+
+Consider a device-to-host vendor capability request with code `0x22`, zero
+value/index, and five requested reply bytes. Its setup bytes are:
+
+```text
+C0 22 00 00 00 00 05 00
+|  |  ----- ----- -----
+|  |  value index length
+|  request code
+request type
+```
+
+The final `05 00` is little-endian length five. It does not say that the entire
+control exchange is five bytes: setup is eight bytes, the data stage requests
+up to five, and the status stage completes the exchange. A five-byte reply
+must still be checked for content; transport success alone does not establish
+that the expected protocol is present.
+
+Host APIs usually accept these fields as values in a setup structure or
+function arguments. Applications do not ordinarily append the eight bytes to
+a bulk command and expect a control transfer to result. Endpoint and transfer
+selection are part of the API operation as well as the payload.
+
 ## Driver selection and application capability
 
 A standard interface class can identify a suitable system driver. Private
@@ -66,6 +90,19 @@ different application protocols.
 This pattern separates stable discovery from evolving semantics. Randomly
 changing identifiers to bypass a failed compatibility check makes deployment
 harder; defining a deliberate capability contract makes the difference visible.
+
+### A descriptor is a schema, not live status
+
+Descriptors tell the host what kinds of communication are available. A
+configuration can describe an interface and endpoints before any measurement
+is ready. An alternate setting can offer another endpoint arrangement for
+that interface; selecting one changes the active arrangement, not the meaning
+of an arbitrary temperature byte by itself.
+
+This is why enumeration belongs before ordinary application I/O. The host
+needs enough structural information to build a usable access path. After that,
+live commands and responses communicate changing state. Confusing descriptive
+metadata with operational results makes both discovery and diagnostics harder.
 
 ## Worked example: a single vendor interface
 

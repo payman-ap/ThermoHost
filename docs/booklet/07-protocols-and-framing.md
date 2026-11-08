@@ -43,6 +43,26 @@ parser should produce the same messages whether a transport returns one byte,
 ten bytes, or several messages per read. USB packet boundaries do not eliminate
 this obligation at the application/library boundary.
 
+### Walk across a read boundary
+
+Suppose one response contains thirty-two bytes, but the transport returns
+chunks of 3, 10, and 19 bytes. The first chunk does not even contain the full
+four-byte magic. After the second, thirteen response bytes exist, which is
+still insufficient for the token at offsets 16–31. Only the third chunk
+completes the candidate. A parser must remember its earlier bytes throughout.
+
+Now prepend one unrelated byte. Counting thirty-two received bytes is no
+longer enough: the first candidate begins at the wrong position. A parser
+using a rolling window can reject that candidate, retain its suffix, and
+recognize the response after the next byte. This explains why framing requires
+both a completion rule and a recovery rule.
+
+With variable-length messages, a similar process first assembles the header,
+validates its declared size against a maximum, then collects the body. A
+received length is input to validate before using it for allocation or buffer
+access. The fixed-size thermometer avoids that particular length-field problem,
+but still needs start recognition and identity checks.
+
 ## Correlation, ordering, and freshness
 
 A request identifier connects a reply to a command. A sequence number orders
@@ -75,6 +95,18 @@ reliable USB delivery solves exactly-once execution.
 Version negotiation should happen before interpreting incompatible payloads.
 An API version describes the library contract; a wire version describes
 message representation/semantics. Their numbers need not be equal.
+
+### Specify error precedence
+
+A frame can contain more than one suspicious field. Suppose its flags are
+`0x03`: both the defined sensor-fault bit and an undefined bit are set. If a
+receiver checks only the sensor bit, it could hide a protocol violation as
+an ordinary device fault. Checking reserved bits first makes interpretation
+consistent: this is a malformed current reply, not merely an open probe.
+
+That rule should be documented alongside the byte layout. Senders, receivers,
+and tests then agree about a result even when several conditions coexist.
+Validation order is observable behavior, not just an implementation detail.
 
 ## Worked example: a request-driven thermometer
 
